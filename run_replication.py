@@ -201,14 +201,23 @@ print(
 neg_log_lik = model.neg_log_likelihood(guess, observed_wage)
 print(f"{neg_log_lik = }")
 
-estimates = model.fit(guess, observed_wage, maxiter=10_000, verbose=False)
+estimates = model.fit(guess, observed_wage, maxiter=1, verbose=True)
 mp = model.extract_model_parameters(estimates)
+
+estimates_transformed = jnp.concatenate(
+    [
+        mp.beta_X, 
+        mp.beta_Y, 
+        jnp.asarray([mp.wage_scale, mp.sigma_X, mp.sigma_Y])
+    ], 
+    axis=0,
+)
 
 # Print with headers
 print(
     tabulate(
-        list(zip(parameter_names, guess, estimates)),
-        headers=["Parameter guess", "Parameter estimates"],
+        list(zip(parameter_names, guess, estimates, estimates_transformed)),
+        headers=["Parameter guess", "Parameter estimates", "Transformed estimates"],
         tablefmt="grid",
     )
 )
@@ -217,6 +226,7 @@ df_estimates = pd.DataFrame(
     {
         "name": parameter_names,
         "estimates": estimates,
+        "transformed_estimates": estimates_transformed,
     }
 )
 # print(df_estimates)

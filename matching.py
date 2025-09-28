@@ -185,17 +185,18 @@ class MatchingModel(Pytree, mutable=False):
         mp (ModelParameters):
             model parameters
         """
-        number_of_parameters_X = self.covariates_X.shape[-1] + 1
+        number_of_parameters_X = self.covariates_X.shape[-1] 
+        number_of_parameters_Y = self.covariates_Y.shape[-1] 
 
         parameters_X = params[:number_of_parameters_X]
-        parameters_Y = params[number_of_parameters_X:-1]
+        parameters_Y = params[number_of_parameters_X:number_of_parameters_X + number_of_parameters_Y]
 
         return ModelParameters(
-            beta_X=parameters_X[:-1],
-            sigma_X=jnp.exp(parameters_X[-1]),
-            beta_Y=parameters_Y[:-1],
-            sigma_Y=jnp.exp(parameters_Y[-1]),
-            wage_scale=params[-1],
+            beta_X=parameters_X,
+            beta_Y=parameters_Y,
+            wage_scale=params[-3],
+            sigma_X=jnp.exp(params[-2]),
+            sigma_Y=jnp.exp(params[-1]),
         )
 
     def Utilities_of_agents(self, mp: ModelParameters) -> tuple[Array, Array]:

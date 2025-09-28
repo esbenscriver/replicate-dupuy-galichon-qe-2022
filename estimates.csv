@@ -1,21 +1,21 @@
-name,estimates
-Years of schooling,-0.0020881474
-Years of experience,-0.0007665901
-Female,-0.00085091894
-Married,0.0
-White,0.0083917705
-Black,0.004450172
-Asian,-0.0019233702
-Years of experience (squared),0.0023491255
-Risk x Years of schooling,0.0020465723
-Public x Years of schooling,-0.001039509
-Risk x Years of experience,0.00028104676
-Public x Years of experience,-0.002450512
-Risk x Females,-0.001416546
-Public x Females,0.0008509075
-Risk,0.0006785947
-Public,0.00054509804
-Public x Years of schooling,0.00014109671
-Sigma (X),0.00014800868
-Sigma (Y),0.0
-Salary constant,0.17519096
+name,estimates,transformed_estimates
+Years of schooling,-0.0020881474,-0.0020881474
+Years of experience,-0.0007665901,-0.0007665901
+Female,-0.00085091894,-0.00085091894
+Married,0.0083917705,0.0083917705
+White,0.004450172,0.004450172
+Black,-0.0019233702,-0.0019233702
+Asian,0.0023491255,0.0023491255
+Years of experience (squared),0.0020465723,0.0020465723
+Risk x Years of schooling,-0.001039509,-0.001039509
+Public x Years of schooling,0.00028104676,0.00028104676
+Risk x Years of experience,-0.002450512,-0.002450512
+Public x Years of experience,-0.001416546,-0.001416546
+Risk x Females,0.0008509075,0.0008509075
+Public x Females,0.0006785947,0.0006785947
+Risk,0.00054509804,0.00054509804
+Public,0.00014109671,0.00014109671
+Public x Years of schooling,0.00014800868,0.00014800868
+Sigma (X),0.17519096,0.17519096
+Sigma (Y),0.0,1.0
+Salary constant,0.0,1.0
