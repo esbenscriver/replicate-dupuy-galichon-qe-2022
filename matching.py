@@ -185,11 +185,13 @@ class MatchingModel(Pytree, mutable=False):
         mp (ModelParameters):
             model parameters
         """
-        number_of_parameters_X = self.covariates_X.shape[-1] 
-        number_of_parameters_Y = self.covariates_Y.shape[-1] 
+        number_of_parameters_X = self.covariates_X.shape[-1]
+        number_of_parameters_Y = self.covariates_Y.shape[-1]
 
         parameters_X = params[:number_of_parameters_X]
-        parameters_Y = params[number_of_parameters_X:number_of_parameters_X + number_of_parameters_Y]
+        parameters_Y = params[
+            number_of_parameters_X : number_of_parameters_X + number_of_parameters_Y
+        ]
 
         return ModelParameters(
             beta_X=parameters_X,
@@ -216,6 +218,22 @@ class MatchingModel(Pytree, mutable=False):
         utility_Y = self.Utility(self.covariates_Y, mp.beta_Y)
         return utility_X, utility_Y
 
+    def variance_of_measurement_error(
+        self, transfer: Array, observed_transfer: Array, transfer_constant: Array
+    ) -> Array:
+        """Estimates the variance of the normal distributed measurement error of the transfers
+
+        Args:
+            transfer (Array): model consistent trasfers
+            observed_transfer (Array): observed transfers
+            transfer_constant (Array): transfer constant
+
+        Returns:
+            sigma^2 (Array): variance of the measurement error
+        """
+        transfer_diag = jnp.diag(transfer) + transfer_constant
+        return jnp.mean((transfer_diag - observed_transfer) ** 2)
+
     def neg_log_likelihood(self, params: Array, observed_transfer: Array) -> Array:
         """Computes the negative log-likelihood function
 
@@ -230,12 +248,11 @@ class MatchingModel(Pytree, mutable=False):
         utility_X, utility_Y = self.Utilities_of_agents(mp)
 
         transfer = self.solve(utility_X, utility_Y, mp)
-        transfer_diag = jnp.diag(transfer) + mp.wage_scale
 
         number_of_observations = 2 * observed_transfer.size
 
         log_lik_transfer = -jnp.log(
-            jnp.mean((transfer_diag - observed_transfer) ** 2)
+            self.variance_of_measurement_error(transfer, observed_transfer, mp.wage_scale)
         ) * (observed_transfer.size / 2)
         log_lik_matched_X = jnp.nansum(
             jnp.diag(self.log_ChoiceProbabilities_X(transfer, utility_X, mp.sigma_X))

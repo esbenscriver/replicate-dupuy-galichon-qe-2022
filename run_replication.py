@@ -1,12 +1,17 @@
-import xml.etree.ElementTree as ET
-
-import pandas as pd
+import jax
 from jax import numpy as jnp
+
 import numpy as np
+import pandas as pd
+
+import xml.etree.ElementTree as ET
 
 from tabulate import tabulate
 
 from matching import MatchingModel
+
+# Increase precision to 64 bit
+jax.config.update("jax_enable_x64", True)
 
 
 def normalize_variables(variables):
@@ -171,7 +176,7 @@ covariate_names = [
 ]
 
 parameter_names = covariate_names.copy()
-parameter_names = parameter_names + ["Sigma (X)", "Sigma (Y)", "Salary constant"]
+parameter_names = parameter_names + ["Salary constant", "Sigma (X)", "Sigma (Y)"]
 
 other_parameters = 3  # sigma1, sigma2, salary constants
 guess = jnp.zeros((covariates_Y.shape[1] + covariates_X.shape[1] + other_parameters,))
@@ -201,15 +206,11 @@ print(
 neg_log_lik = model.neg_log_likelihood(guess, observed_wage)
 print(f"{neg_log_lik = }")
 
-estimates = model.fit(guess, observed_wage, maxiter=1, verbose=True)
+estimates = model.fit(guess, observed_wage, maxiter=1_000, verbose=True)
 mp = model.extract_model_parameters(estimates)
 
 estimates_transformed = jnp.concatenate(
-    [
-        mp.beta_X, 
-        mp.beta_Y, 
-        jnp.asarray([mp.wage_scale, mp.sigma_X, mp.sigma_Y])
-    ], 
+    [mp.beta_X, mp.beta_Y, jnp.asarray([mp.wage_scale, mp.sigma_X, mp.sigma_Y])],
     axis=0,
 )
 
