@@ -197,10 +197,10 @@ model = MatchingModel(
 
 parameter_names = covariate_names.copy()
 if model.include_transfer_constant is True:
-    parameter_names += ["salary constant"]
+    parameter_names += ["Salary constant"]
 
 if model.include_scale_parameters is True:
-    parameter_names += ["scale parameter (workers)", "scale parameter (firms)"]
+    parameter_names += ["Scale parameter (workers)", "Scale parameter (firms)"]
 
 df_covariate_stats = pd.DataFrame(
     {
@@ -288,4 +288,4 @@ print(df_moments)
 print("=" * 80)
 
 if include_transfer_constant is True and include_scale_parameters is True:
-    df_estimates.to_markdown("output/estimated_moments.md", floatfmt=".3f")
+    df_moments.to_markdown("output/estimated_moments.md", floatfmt=".3f")

@@ -2,8 +2,8 @@
 # Description
 This project aims at replicating the empirical results of [Dupuy and Galichon (2022)](https://doi.org/10.3982/QE928) who estimates the value of a statistical life using compensating wage differentials for the risk of fatal injury on the job. Using US data for 2017, they estimate the value of statistical life to be $6.3 million ($2017). Their estimate relies on maximum likelihood estimation of a one-to-one matching model with transferable utility, where the demand and supply of labor is given by the logit formula. The estimation procedure simultaneously fits both the matching patterns and the wage curve.
 
-## Comparison of estimates
-|.                              |   Dupuy-Galichon (2022) |   Andersen (2025) |
+## Comparison of maximum likelihood estimates
+|                               |   Dupuy-Galichon (2022) |   Andersen (2025) |
 |:------------------------------|------------------------:|------------------:|
 | Years of schooling            |                   0.057 |             0.953 |
 | Years of experience           |                   0.084 |             0.993 |
@@ -22,9 +22,9 @@ This project aims at replicating the empirical results of [Dupuy and Galichon (2
 | Risk                          |                  -0.023 |             0.995 |
 | Public                        |                  -0.062 |             1.014 |
 | Public x Years of schooling   |                   0.081 |             1.002 |
-| salary constant               |                   2.981 |             0.064 |
-| scale parameter (workers)     |                   0.046 |             1.000 |
-| scale parameter (firms)       |                   2.233 |             1.000 |
+| Salary constant               |                   2.981 |             0.064 |
+| Scale parameter (workers)     |                   0.046 |             1.000 |
+| Scale parameter (firms)       |                   2.233 |             1.000 |
 
 ## Descriptives
 |                     |   mean |   std |   min |    max |

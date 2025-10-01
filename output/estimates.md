@@ -17,6 +17,6 @@
 | Risk                          |                  -0.023 |             0.995 |
 | Public                        |                  -0.062 |             1.014 |
 | Public x Years of schooling   |                   0.081 |             1.002 |
-| salary constant               |                   2.981 |             0.064 |
-| scale parameter (workers)     |                   0.046 |             1.000 |
-| scale parameter (firms)       |                   2.233 |             1.000 |
+| Salary constant               |                   2.981 |             0.064 |
+| Scale parameter (workers)     |                   0.046 |             1.000 |
+| Scale parameter (firms)       |                   2.233 |             1.000 |
