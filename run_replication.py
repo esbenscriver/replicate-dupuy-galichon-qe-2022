@@ -1,6 +1,9 @@
 import jax
 from jax import numpy as jnp
 
+from jaxopt import FixedPointIteration
+from squarem_jaxopt import SquaremAcceleration
+
 import numpy as np
 import pandas as pd
 
@@ -13,6 +16,8 @@ from matching import MatchingModel, Data
 # Increase precision to 64 bit
 jax.config.update("jax_enable_x64", True)
 
+include_transfer_constant = True
+include_scale_parameters = True
 
 def normalize_variables(variables):
     return (variables - np.mean(variables, axis=0, keepdims=True)) / np.std(
@@ -87,27 +92,37 @@ print("=" * 80)
 print("Summary Statistics Table")
 print("=" * 80)
 
-summary_stats = df[numeric_columns].describe().T
-summary_stats = summary_stats.round(4)
+variable_names = {
+    "wage": "Wage (hourly)",
+    "x_yrseduc": "Years of schooling",
+    "x_exp": "Years of experience",
+    "x_ethn": "Ethnicity",
+    "x_sex": "Female",
+    "x_union": "Union",
+    "x_lma": "Local labor market",
+    "x_region": "Region",
+    "x_married": "Married",
+    "x_white": "White",
+    "x_black": "Black",
+    "x_asian": "Asian",
+    "y_risk_rateh_occind_ave": "Risk (per 100,000) ",
+    "y_public": "Public",
+    "y_hospital": "Hospital",
+}
+variables_to_describe = ["wage", "x_yrseduc", "x_exp", "x_sex", "x_married", "x_white", "x_black", "x_asian", "y_risk_rateh_occind_ave", "y_public"]
 
-# Format the table nicely
-print(f"{'Variable':<25} {'Mean':<12} {'Std':<12} {'Min':<12} {'Max':<12}")
-print("-" * 80)
-
-for var in summary_stats.index:
-    mean_val = summary_stats.loc[var, "mean"]
-    std_val = summary_stats.loc[var, "std"]
-    min_val = summary_stats.loc[var, "min"]
-    max_val = summary_stats.loc[var, "max"]
-
-    print(
-        f"{var:<25} {mean_val:<12.2f} {std_val:<12.2f} {min_val:<12.2f} {max_val:<12.2f}"
-    )
+summary_stats = df[variables_to_describe].describe().T
+summary_stats = summary_stats.round(2)
+summary_stats = summary_stats[["mean", "std", "min", "max"]]
+summary_stats = summary_stats.rename(index=variable_names)
+print(summary_stats)
 print("=" * 80)
 print(f"Dataset shape: {df.shape}")
 print(f"Number of observations: {len(df)}")
-print(f"Number of variables: {len(df.columns)}")
-print("=" * 80)
+print(f"Number of variables: {len(df.columns)}\n")
+
+# Save summary statistics to Markdown files
+summary_stats.to_markdown("output/summary_stats.md")
 
 none_dummy_columns = ["x_yrseduc", "x_exp", "y_risk_rateh_occind_ave"]
 
@@ -115,7 +130,6 @@ array_none_dummy = df[none_dummy_columns].to_numpy()
 df[none_dummy_columns] = normalize_variables(array_none_dummy)
 
 df["x_exp_sq"] = df["x_exp"].to_numpy() ** 2
-print(df.columns)
 
 X_columns = [
     "x_yrseduc",
@@ -175,76 +189,91 @@ covariate_names = [
     "Public x Years of schooling",
 ]
 
-other_parameters = 3  # sigma1, sigma2, salary constants
-guess = jnp.ones((covariates_Y.shape[1] + covariates_X.shape[1] + other_parameters,))
-
 model = MatchingModel(
     covariates_X=covariates_X[None, :, :],
     covariates_Y=covariates_Y[:, None, :],
+
+    marginal_distribution_X=jnp.ones((1, covariates_X.shape[0])) / covariates_X.shape[0],
+    marginal_distribution_Y=jnp.ones((covariates_Y.shape[0], 1)) / covariates_Y.shape[0],
+
+    continuous_distributed_attributes=True,
+    include_transfer_constant=include_transfer_constant,
+    include_scale_parameters=include_scale_parameters,
 )
 
 parameter_names = covariate_names.copy()
-if model.centered_variance is False:
-    parameter_names += ["Salary constant"]
-parameter_names += ["scale (X)", "scale (Y)"]
+if model.include_transfer_constant is True:
+    parameter_names += ["salary constant"]
 
-print("Summary statistics of covariates:")
-print(
-    tabulate(
-        list(zip(
-            covariate_names,
-            jnp.mean(covariates, axis=0),
-            jnp.std(covariates, axis=0),
-            jnp.min(covariates, axis=0),
-            jnp.max(covariates, axis=0),
-        )),
-        headers=["mean", "std", "min", "max"],
-        tablefmt="grid",
-    )
+if model.include_scale_parameters is True:
+    parameter_names += ["scale (X)", "scale (Y)"]
+
+df_covariate_stats = pd.DataFrame(
+    {
+        "name": covariate_names,
+        "mean": jnp.mean(covariates, axis=0),
+        "std": jnp.std(covariates, axis=0),
+        "min": jnp.min(covariates, axis=0),
+        "max": jnp.max(covariates, axis=0),
+    }
 )
+df_covariate_stats = df_covariate_stats.set_index("name")
+df_covariate_stats = df_covariate_stats.round(3)
+df_covariate_stats.to_markdown("output/covariate_stats.md")
+print("=" * 80)
+print("Covariate Statistics Table")
+print("=" * 80)
+print(df_covariate_stats)
+print("=" * 80)
+
 data = Data(transfers=observed_wage, matches=jnp.ones_like(observed_wage, dtype=float))
 
+guess = jnp.ones(len(covariate_names))
+if model.include_transfer_constant is True:
+    guess = jnp.concatenate([guess, jnp.array([0.0])], axis=0)
+
+if model.include_scale_parameters is True:
+    guess = jnp.concatenate([guess, jnp.array([0.0, 0.0])], axis=0)
+
 neg_log_lik = model.neg_log_likelihood(guess, data)
-print(f"{model.replication = }: number of observations: {3*observed_wage.size}")
 print(f"{neg_log_lik = }")
 
+estimates = model.fit(guess, data, maxiter=1, verbose=True)
+mp = model.extract_model_parameters(estimates, transform=True)
+estimates_transformed = model.class2vec(mp, transform=False)
 
-estimates = model.fit(guess, data, maxiter=3, verbose=True)
-mp = model.extract_model_parameters(estimates)
+dupuy_galichon_parameters = [
+    0.057, 0.084, -0.404, 0.050, 0.046, -0.108, -0.069, -0.051, -0.059, 0.074, -2.388, 0.838, 0.096, 0.548, -0.023, -0.062, 0.081, 2.981, 0.046, 2.233
+]
+print(f"{len(dupuy_galichon_parameters)=}, {len(parameter_names)=}")
 
-estimates_transformed = jnp.concatenate(
-    [mp.beta_X, mp.beta_Y, jnp.asarray([mp.transfer_constant, mp.sigma_X, mp.sigma_Y])],
-    axis=0,
-)
-
-# Print estimated parameters
-print(
-    tabulate(
-        list(zip(parameter_names, guess, estimates, estimates_transformed)),
-        headers=["Parameter guess", "Parameter estimates", "Transformed estimates"],
-        tablefmt="grid",
-    )
-)
-
+print("=" * 80)
+print("Parameter Estimates")
+print("=" * 80)
 df_estimates = pd.DataFrame(
     {
         "name": parameter_names,
-        "estimates": estimates,
-        "transformed_estimates": estimates_transformed,
+        "Dupuy-Galichon (2022)": dupuy_galichon_parameters,
+        "estimates": estimates_transformed,
     }
 )
+df_estimates = df_estimates.round(3)
+df_estimates = df_estimates.set_index("name")
+print(df_estimates)
+print("=" * 80)
+df_estimates.to_markdown("output/estimates.md")
 
-df_estimates.to_csv("estimates.csv", index=False)
+variance, mean = model.compute_moments(estimates, data)
 
-mean, variance = model.compute_moments(estimates, data)
-moment_estimates = jnp.asarray([mean, variance])
-moment_names = ['mean','variance']
-
-# Print estimated mean and variance of measurement errors
-print(
-    tabulate(
-        list(zip(moment_names, moment_estimates)),
-        headers=["Parameter estimates"],
-        tablefmt="grid",
-    )
-)
+df_moments = pd.DataFrame(
+    {
+        "name": ['mean','variance'],
+        "estimates": jnp.asarray([mean, variance]),
+    }
+).set_index("name").round(3)
+print("=" * 80)
+print("Estimated Moments of Measurement Errors")
+print("=" * 80)
+print(df_moments)
+print("=" * 80)
+df_estimates.to_markdown("output/estimated_moments.md")

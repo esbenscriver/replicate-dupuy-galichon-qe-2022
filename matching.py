@@ -232,6 +232,7 @@ class MatchingModel(Pytree, mutable=False):
             tol=tol,
             verbose=verbose,
         ).run(transfer_init, utility_X, utility_Y, mp)
+        # print(result.state)
         return result.params
 
     def extract_model_parameters(self, params: Array, transform: bool = True) -> ModelParameters:
@@ -444,5 +445,6 @@ class MatchingModel(Pytree, mutable=False):
             tol=tol,
             maxiter=maxiter,
             verbose=verbose,
+            jit=False,
         ).run(guess, data)
         return result.params

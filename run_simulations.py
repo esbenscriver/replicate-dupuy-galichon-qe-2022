@@ -86,7 +86,7 @@ data = Data(
 
 guess = jnp.zeros_like(parameter_values)
 
-estimates = model.fit(guess, data, maxiter=100, verbose=False)
+estimates = model.fit(guess, data, maxiter=1, verbose=False)
 mp_estim = model.extract_model_parameters(estimates, transform=True)
 estimates_transformed = model.class2vec(mp_estim, transform=False)
 
@@ -98,7 +98,7 @@ print(
         tablefmt="grid",
     )
 )
-print(f"number of observations: {3*observed_treansfer.size}\n")
+print(f"number of observations: {observed_treansfer.size}\n")
 
 print(f"{model.neg_log_likelihood(parameter_values_transformed, data) = }")
 print(f"{model.neg_log_likelihood(estimates, data) = }\n")
@@ -109,7 +109,7 @@ df_estimates = pd.DataFrame(
         "estimates": estimates,
         "transformed_estimates": estimates_transformed,
     }
-)
+).set_index("name")
 
 variance, mean = model.compute_moments(estimates, data)
 moment_estimates = jnp.asarray([mean, variance])
