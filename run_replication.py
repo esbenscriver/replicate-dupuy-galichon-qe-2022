@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 
 from matching import MatchingModel, Data
 from dupuy_galichon_2022 import (
+    variables_to_describe,
     variable_names,
     covariate_names,
     dupuy_galichon_estimates,
@@ -92,19 +93,6 @@ for col in numeric_columns:
 print("=" * 80)
 print("Summary Statistics Table")
 print("=" * 80)
-
-variables_to_describe = [
-    "wage",
-    "x_yrseduc",
-    "x_exp",
-    "x_sex",
-    "x_married",
-    "x_white",
-    "x_black",
-    "x_asian",
-    "y_risk_rateh_occind_ave",
-    "y_public",
-]
 
 summary_stats = df[variables_to_describe].describe().T
 summary_stats = summary_stats.round(2)
