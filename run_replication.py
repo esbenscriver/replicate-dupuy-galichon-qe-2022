@@ -254,7 +254,7 @@ df_estimates = pd.DataFrame(
     {
         "name": parameter_names,
         "Dupuy-Galichon (2022)": dupuy_galichon_parameters,
-        "estimates": estimates_transformed,
+        "Andersen (2025)": estimates_transformed,
     }
 )
 df_estimates = df_estimates.round(3)
