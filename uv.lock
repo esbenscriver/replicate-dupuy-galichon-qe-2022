@@ -732,7 +732,7 @@ wheels = [
 ]
 
 [[package]]
-name = "replication-dupuy-galichoin-qe-2022"
+name = "replicate-dupuy-galichon-qe-2022"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [

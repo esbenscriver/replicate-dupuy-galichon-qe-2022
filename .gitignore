@@ -10,5 +10,8 @@ wheels/
 # Virtual environments
 .venv
 
+# Files in the Repl_QE folders
 *.m
 *.docx
+*.pdf
+*.csv

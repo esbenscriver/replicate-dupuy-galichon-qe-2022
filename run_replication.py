@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
 
 from tabulate import tabulate
 
-from matching import MatchingModel
+from matching import MatchingModel, Data
 
 # Increase precision to 64 bit
 jax.config.update("jax_enable_x64", True)
@@ -175,46 +175,49 @@ covariate_names = [
     "Public x Years of schooling",
 ]
 
-parameter_names = covariate_names.copy()
-parameter_names = parameter_names + ["Salary constant", "Sigma (X)", "Sigma (Y)"]
-
 other_parameters = 3  # sigma1, sigma2, salary constants
-guess = jnp.zeros((covariates_Y.shape[1] + covariates_X.shape[1] + other_parameters,))
+guess = jnp.ones((covariates_Y.shape[1] + covariates_X.shape[1] + other_parameters,))
 
 model = MatchingModel(
     covariates_X=covariates_X[None, :, :],
     covariates_Y=covariates_Y[:, None, :],
 )
 
+parameter_names = covariate_names.copy()
+if model.centered_variance is False:
+    parameter_names += ["Salary constant"]
+parameter_names += ["scale (X)", "scale (Y)"]
+
 print("Summary statistics of covariates:")
 print(
     tabulate(
-        list(
-            zip(
-                covariate_names,
-                jnp.mean(covariates, axis=0),
-                jnp.std(covariates, axis=0),
-                jnp.min(covariates, axis=0),
-                jnp.max(covariates, axis=0),
-            )
-        ),
+        list(zip(
+            covariate_names,
+            jnp.mean(covariates, axis=0),
+            jnp.std(covariates, axis=0),
+            jnp.min(covariates, axis=0),
+            jnp.max(covariates, axis=0),
+        )),
         headers=["mean", "std", "min", "max"],
         tablefmt="grid",
     )
 )
+data = Data(transfers=observed_wage, matches=jnp.ones_like(observed_wage, dtype=float))
 
-neg_log_lik = model.neg_log_likelihood(guess, observed_wage)
+neg_log_lik = model.neg_log_likelihood(guess, data)
+print(f"{model.replication = }: number of observations: {3*observed_wage.size}")
 print(f"{neg_log_lik = }")
 
-estimates = model.fit(guess, observed_wage, maxiter=1_000, verbose=True)
+
+estimates = model.fit(guess, data, maxiter=3, verbose=True)
 mp = model.extract_model_parameters(estimates)
 
 estimates_transformed = jnp.concatenate(
-    [mp.beta_X, mp.beta_Y, jnp.asarray([mp.wage_scale, mp.sigma_X, mp.sigma_Y])],
+    [mp.beta_X, mp.beta_Y, jnp.asarray([mp.transfer_constant, mp.sigma_X, mp.sigma_Y])],
     axis=0,
 )
 
-# Print with headers
+# Print estimated parameters
 print(
     tabulate(
         list(zip(parameter_names, guess, estimates, estimates_transformed)),
@@ -230,8 +233,18 @@ df_estimates = pd.DataFrame(
         "transformed_estimates": estimates_transformed,
     }
 )
-# print(df_estimates)
 
 df_estimates.to_csv("estimates.csv", index=False)
 
-# pd.read_csv("estimates.csv")
+mean, variance = model.compute_moments(estimates, data)
+moment_estimates = jnp.asarray([mean, variance])
+moment_names = ['mean','variance']
+
+# Print estimated mean and variance of measurement errors
+print(
+    tabulate(
+        list(zip(moment_names, moment_estimates)),
+        headers=["Parameter estimates"],
+        tablefmt="grid",
+    )
+)
