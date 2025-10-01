@@ -1,3 +1,16 @@
+variables_to_describe = [
+    "wage",
+    "x_yrseduc",
+    "x_exp",
+    "x_sex",
+    "x_married",
+    "x_white",
+    "x_black",
+    "x_asian",
+    "y_risk_rateh_occind_ave",
+    "y_public",
+]
+
 variable_names = {
     "wage": "Wage (hourly)",
     "x_yrseduc": "Years of schooling",
