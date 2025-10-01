@@ -90,10 +90,10 @@ class MatchingModel(Pytree, mutable=False):
         P_outside (Array):
             choice probabilities of outside option.
         """
-        # v_max = jnp.max(v, axis=axis, keepdims=True)
+        v_max = jnp.max(v, axis=axis, keepdims=True)
 
         # exponentiated centered payoffs of inside options
-        nominator = jnp.exp(v)
+        nominator = jnp.exp(v - v_max)
 
         # denominator of choice probabilities
         denominator = jnp.sum(nominator, axis=axis, keepdims=True)
