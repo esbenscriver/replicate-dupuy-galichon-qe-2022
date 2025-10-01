@@ -9,8 +9,6 @@ import jax
 import jax.numpy as jnp
 from jax import Array
 
-from jax.scipy.special import logsumexp
-
 # import simple_pytree (used to store variables)
 from simple_pytree import Pytree, dataclass
 
@@ -51,7 +49,7 @@ class ModelParameters(Pytree, mutable=False):
     beta_Y: Array
     sigma_X: Array
     sigma_Y: Array
-    # transfer_constant: Array
+    transfer_constant: Array
 
 
 @dataclass
@@ -63,9 +61,9 @@ class MatchingModel(Pytree, mutable=False):
         covariates_Y (Array): covariates of utility function of agents of type Y
         marginal_distribution_X (Array): marginal distribution of agents of type X
         marginal_distribution_Y (Array): marginal distribution of agents of type Y
-        replication (bool): replicate empirical model of Dupuy and Galichon (2022) if True
+        continuous_distributed_attributes (bool): replicate empirical model of Dupuy and Galichon (2022) if True
         include_scale_parameters (bool): include scale parameters if True
-        centered_variance (bool): use centered variance of measurement errors if True
+        include_salary_constant (bool): use centered variance of measurement errors if True
     """
 
     covariates_X: Array
@@ -74,9 +72,9 @@ class MatchingModel(Pytree, mutable=False):
     marginal_distribution_X: Array
     marginal_distribution_Y: Array
 
-    replication: bool = True
-    include_scale_parameters: bool = True
-    centered_variance: bool = False
+    continuous_distributed_attributes: bool
+    include_transfer_constant: bool
+    include_scale_parameters: bool
 
     def ChoiceProbabilities(self, v: Array, axis: int) -> Array:
         """Compute the logit choice probabilities for inside and outside options
@@ -236,7 +234,7 @@ class MatchingModel(Pytree, mutable=False):
         ).run(transfer_init, utility_X, utility_Y, mp)
         return result.params
 
-    def extract_model_parameters(self, params: Array) -> ModelParameters:
+    def extract_model_parameters(self, params: Array, transform: bool = True) -> ModelParameters:
         """Extract and store model parameters
 
         Args:
@@ -254,27 +252,65 @@ class MatchingModel(Pytree, mutable=False):
             number_of_covariates_X : number_of_covariates_X + number_of_covariates_Y
         ]
 
-        # if self.centered_variance is False:
-        #     transfer_constant = params[-3]
-        # else:
-        #     transfer_constant = jnp.asarray(0.0)
-
-        if self.include_scale_parameters is True:
-            sigma_X=jnp.exp(params[-2])
-            sigma_Y=jnp.exp(params[-1])
-            # sigma_X = params[-2]
-            # sigma_Y = params[-1]
+        if self.include_transfer_constant is True:
+            transfer_constant = jnp.asarray([params[-3]])
         else:
-            sigma_X = jnp.asarray(1.0)
-            sigma_Y = jnp.asarray(1.0)
+            transfer_constant = jnp.asarray([0.0])
+
+        if self.include_scale_parameters is True and transform is True:
+            sigma_X=jnp.exp(jnp.asarray([params[-2]]))
+            sigma_Y=jnp.exp(jnp.asarray([params[-1]]))
+        elif self.include_scale_parameters is True and transform is False:
+            sigma_X=jnp.asarray(params[-2])
+            sigma_Y=jnp.asarray(params[-1])
+        elif self.include_scale_parameters is False:
+            sigma_X = jnp.asarray([1.0])
+            sigma_Y = jnp.asarray([1.0])
+        else:
+            raise ValueError("include_scale_parameters must be True or False")
         
         return ModelParameters(
             beta_X=beta_X,
             beta_Y=beta_Y,
-            # transfer_constant=transfer_constant,
+            transfer_constant=transfer_constant,
             sigma_X=sigma_X,
             sigma_Y=sigma_Y,
         )
+    
+    def class2vec(self, mp: ModelParameters, transform: bool) -> Array:
+        """Transform model parameters from ModelParameters class to vector
+
+        Args:
+            mp (ModelParameters): model parameters
+
+        Returns:
+        params (Array):
+            parameters of agents' utility functions
+        """
+        params = jnp.concatenate([mp.beta_X, mp.beta_Y], axis=0)
+        if self.include_transfer_constant is True:
+            params = jnp.concatenate([params, mp.transfer_constant], axis=0)
+        if self.include_scale_parameters is True and transform is True:
+            params = jnp.concatenate(
+                [
+                    params, 
+                    jnp.concatenate([jnp.log(mp.sigma_X), jnp.log(mp.sigma_Y)], axis=0)
+                ],
+                axis=0,
+            )
+        elif self.include_scale_parameters is True and transform is False:
+            params = jnp.concatenate(
+                [
+                    params, 
+                    jnp.concatenate([mp.sigma_X, mp.sigma_Y], axis=0)
+                ],
+                axis=0,
+            )
+        elif self.include_scale_parameters is False:
+            params = params
+        else:
+            raise ValueError("include_scale_parameters must be True or False")
+        return params
 
     def Utilities_of_agents(self, mp: ModelParameters) -> tuple[Array, Array]:
         """Compute match-specific utilities for agents of type X and Y
@@ -310,10 +346,10 @@ class MatchingModel(Pytree, mutable=False):
 
         mu = jnp.mean(error)
 
-        if self.centered_variance is True:
-            return jnp.mean((error - mu) ** 2), mu
-        else:
+        if self.include_transfer_constant is True:
             return jnp.mean(error ** 2), mu
+        else:
+            return jnp.mean((error - mu) ** 2), mu
         
     def compute_moments(self, params: Array, data: Data) -> tuple[Array, Array]:
         """Computes the mean and variance of the measurement errors
@@ -331,9 +367,9 @@ class MatchingModel(Pytree, mutable=False):
         mp = self.extract_model_parameters(params)
         utility_X, utility_Y = self.Utilities_of_agents(mp)
 
-        transfer = self.solve(utility_X, utility_Y, mp)
+        transfer = self.solve(utility_X, utility_Y, mp) + mp.transfer_constant
 
-        if self.replication is True:
+        if self.continuous_distributed_attributes is True:
             model_transfer = jnp.diag(transfer)
         else:
             model_transfer = transfer
@@ -355,12 +391,12 @@ class MatchingModel(Pytree, mutable=False):
 
         transfer = self.solve(utility_X, utility_Y, mp)
 
-        if self.replication is True:
-            model_transfer = jnp.diag(transfer)
+        if self.continuous_distributed_attributes is True:
+            model_transfer = jnp.diag(transfer) + mp.transfer_constant
             pX = jnp.diag(self.ChoiceProbabilities_X(transfer, utility_X, mp.sigma_X))
             pY = jnp.diag(self.ChoiceProbabilities_Y(transfer, utility_Y, mp.sigma_Y))
         else:
-            model_transfer = transfer
+            model_transfer = transfer + mp.transfer_constant
             pX = self.ChoiceProbabilities_X(transfer, utility_X, mp.sigma_X)
             pY = self.ChoiceProbabilities_Y(transfer, utility_Y, mp.sigma_Y)
 

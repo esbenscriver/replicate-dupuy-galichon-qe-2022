@@ -5,21 +5,16 @@ import pandas as pd
 
 from tabulate import tabulate
 
-from matching import MatchingModel, Data
-
-import sys
+from matching import MatchingModel, Data, ModelParameters
 
 # Increase precision to 64 bit
 jax.config.update("jax_enable_x64", True)
 
+include_transfer_constant = False
+include_scale_parameters = True
+
 # Set dimensions
 X, Y, N, M = 50, 30, 5, 3
-
-# set mean and variance of measurement errors
-mu, sigma = 0.0, 0.1
-
-# Simulate data
-errors = mu + sigma * jax.random.normal(jax.random.PRNGKey(111), (X, Y))
 
 covariates_X = jax.random.normal(jax.random.PRNGKey(211), (X, Y, N))
 covariates_Y = jax.random.normal(jax.random.PRNGKey(212), (X, Y, M))
@@ -34,14 +29,20 @@ assert jnp.isclose(
 beta_X = jax.random.uniform(jax.random.PRNGKey(311), (N,))
 beta_Y = -jax.random.uniform(jax.random.PRNGKey(312), (M,))
 
-sigma_X = jnp.asarray(2.0)
-sigma_Y = jnp.asarray(1.0)
-transfer_constant = jnp.asarray(0.0)
+if include_scale_parameters is True:
+    sigma_X = jnp.asarray([2.00])
+    sigma_Y = jnp.asarray([1.50])
+else:
+    sigma_X = jnp.asarray([1.0])
+    sigma_Y = jnp.asarray([1.0])
 
-parameters = jnp.concatenate(
-    [beta_X, beta_Y, jnp.asarray([jnp.log(sigma_X), jnp.log(sigma_Y)])],
-    axis=0,
-)
+transfer_constant = jnp.asarray([1.0]   )
+
+# set mean and variance of measurement errors
+mu, sigma = transfer_constant, 0.001
+
+# Simulate data
+errors = mu + jnp.sqrt(sigma) * jax.random.normal(jax.random.PRNGKey(111), (X, Y))
 
 model = MatchingModel(
     covariates_X=covariates_X,
@@ -50,49 +51,57 @@ model = MatchingModel(
     marginal_distribution_X = marginal_distribution_X,
     marginal_distribution_Y = marginal_distribution_Y,
 
-    include_scale_parameters=True,
-    replication=False,
-    centered_variance=False,
+    continuous_distributed_attributes = False,
+    include_transfer_constant = include_transfer_constant,
+    include_scale_parameters = include_scale_parameters,
 )
+parameter_names_X = [f"beta_X {n}" for n in range(N)]
+parameter_names_Y = [f"beta_Y {m}" for m in range(M)]
 
-mp = model.extract_model_parameters(parameters)
-utility_X, utility_Y = model.Utilities_of_agents(mp)
-transfer = model.solve(utility_X=utility_X, utility_Y=utility_Y, mp=mp, verbose=False)
+parameter_names = parameter_names_X + parameter_names_Y
+
+if model.include_transfer_constant is True:
+    parameter_names += ["salary constant"]
+if model.include_scale_parameters is True:
+    parameter_names += ["scale (X)", "scale (Y)"]
+
+mp_true = ModelParameters(
+    beta_X=beta_X,
+    beta_Y=beta_Y,
+    sigma_X=sigma_X,
+    sigma_Y=sigma_Y,
+    transfer_constant=transfer_constant,
+)
+parameter_values = model.class2vec(mp_true, transform=False)
+parameter_values_transformed = model.class2vec(mp_true, transform=True)
+
+utility_X, utility_Y = model.Utilities_of_agents(mp_true)
+transfer = model.solve(utility_X=utility_X, utility_Y=utility_Y, mp=mp_true, verbose=False)
 observed_treansfer = transfer + errors
 
-covariate_names_X = [f"beta_X {n}" for n in range(N)]
-covariate_names_Y = [f"beta_Y {m}" for m in range(M)]
-covariate_names = covariate_names_X + covariate_names_Y
-
-parameter_names = covariate_names.copy()
-# if model.centered_variance is False:
-#     parameter_names += ["Salary constant"]
-parameter_names += ["scale (X)", "scale (Y)"]
-
-data = Data(transfers=observed_treansfer, matches=jnp.ones_like(observed_treansfer, dtype=float))
-
-guess = jnp.zeros_like(parameters)
-
-neg_log_lik = model.neg_log_likelihood(guess, data)
-print(f"{model.replication = }: number of observations: {3*observed_treansfer.size}")
-print(f"{neg_log_lik = }")
-
-estimates = model.fit(guess, data, maxiter=100, verbose=True)
-mp = model.extract_model_parameters(estimates)
-
-estimates_transformed = jnp.concatenate(
-    [mp.beta_X, mp.beta_Y, jnp.asarray([mp.sigma_X, mp.sigma_Y])],
-    axis=0,
+data = Data(
+    transfers=observed_treansfer, 
+    matches=jnp.ones_like(observed_treansfer, dtype=float)
 )
+
+guess = jnp.zeros_like(parameter_values)
+
+estimates = model.fit(guess, data, maxiter=100, verbose=False)
+mp_estim = model.extract_model_parameters(estimates, transform=True)
+estimates_transformed = model.class2vec(mp_estim, transform=False)
 
 # Print estimated parameters
 print(
     tabulate(
-        list(zip(parameter_names, parameters, guess, estimates, estimates_transformed)),
+        list(zip(parameter_names, parameter_values, guess, estimates, estimates_transformed)),
         headers=["True parameter values", "Parameter guess", "Parameter estimates", "Transformed estimates"],
         tablefmt="grid",
     )
 )
+print(f"number of observations: {3*observed_treansfer.size}\n")
+
+print(f"{model.neg_log_likelihood(parameter_values_transformed, data) = }")
+print(f"{model.neg_log_likelihood(estimates, data) = }\n")
 
 df_estimates = pd.DataFrame(
     {
@@ -102,7 +111,7 @@ df_estimates = pd.DataFrame(
     }
 )
 
-mean, variance = model.compute_moments(estimates, data)
+variance, mean = model.compute_moments(estimates, data)
 moment_estimates = jnp.asarray([mean, variance])
 moment_names = ['mean','variance']
 
