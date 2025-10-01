@@ -40,3 +40,5 @@ This project aims at replicating the empirical results of [Dupuy and Galichon (2
 | Risk (per 100,000)  |   3.44 | 13.05 |  0    | 345.7 |
 | Public              |   0.12 |  0.33 |  0    |   1   |
 
+Table of descriptives matches Table 1 of Dupuy and Galichon (2022).
+

@@ -1,15 +1,10 @@
 import jax
 from jax import numpy as jnp
 
-from jaxopt import FixedPointIteration
-from squarem_jaxopt import SquaremAcceleration
-
 import numpy as np
 import pandas as pd
 
 import xml.etree.ElementTree as ET
-
-from tabulate import tabulate
 
 from matching import MatchingModel, Data
 
@@ -117,7 +112,6 @@ summary_stats = summary_stats[["mean", "std", "min", "max"]]
 summary_stats = summary_stats.rename(index=variable_names)
 print(summary_stats)
 print("=" * 80)
-print(f"Dataset shape: {df.shape}")
 print(f"Number of observations: {len(df)}")
 print(f"Number of variables: {len(df.columns)}\n")
 
@@ -225,6 +219,7 @@ print("Covariate Statistics Table")
 print("=" * 80)
 print(df_covariate_stats)
 print("=" * 80)
+print(f"Number of covariates: {len(df_covariate_stats)}\n")
 
 data = Data(transfers=observed_wage, matches=jnp.ones_like(observed_wage, dtype=float))
 
@@ -243,25 +238,40 @@ mp = model.extract_model_parameters(estimates, transform=True)
 estimates_transformed = model.class2vec(mp, transform=False)
 
 dupuy_galichon_parameters = [
-    0.057, 0.084, -0.404, 0.050, 0.046, -0.108, -0.069, -0.051, -0.059, 0.074, -2.388, 0.838, 0.096, 0.548, -0.023, -0.062, 0.081, 2.981, 0.046, 2.233
+    0.057, 0.084, -0.404, 0.050, 0.046, -0.108, -0.069, -0.051, 
+    -0.059, 0.074, -2.388, 0.838, 0.096, 0.548, 
+    -0.023, -0.062, 0.081, 
+    2.981, 0.046, 2.233
 ]
-print(f"{len(dupuy_galichon_parameters)=}, {len(parameter_names)=}")
+
 
 print("=" * 80)
 print("Parameter Estimates")
 print("=" * 80)
-df_estimates = pd.DataFrame(
-    {
-        "name": parameter_names,
-        "Dupuy-Galichon (2022)": dupuy_galichon_parameters,
-        "Andersen (2025)": estimates_transformed,
-    }
-)
-df_estimates = df_estimates.round(3)
-df_estimates = df_estimates.set_index("name")
-print(df_estimates)
+if include_transfer_constant is True and include_scale_parameters is True:
+    df_estimates = pd.DataFrame(
+        {
+            "name": parameter_names,
+            "Dupuy-Galichon (2022)": dupuy_galichon_parameters,
+            "Andersen (2025)": estimates_transformed,
+        }
+    )
+    df_estimates = df_estimates.round(3)
+    df_estimates = df_estimates.set_index("name")
+    print(df_estimates)
+    df_estimates.to_markdown("output/estimates.md")
+else:
+    df_estimates = pd.DataFrame(
+        {
+            "name": parameter_names,
+            "Andersen (2025)": estimates_transformed,
+        }
+    )
+    df_estimates = df_estimates.round(3)
+    df_estimates = df_estimates.set_index("name")
+    print(df_estimates)
 print("=" * 80)
-df_estimates.to_markdown("output/estimates.md")
+print(f"Number of estimated parameters: {len(df_estimates)}\n")
 
 variance, mean = model.compute_moments(estimates, data)
 
@@ -276,4 +286,6 @@ print("Estimated Moments of Measurement Errors")
 print("=" * 80)
 print(df_moments)
 print("=" * 80)
-df_estimates.to_markdown("output/estimated_moments.md")
+
+if include_transfer_constant is True and include_scale_parameters is True:
+    df_estimates.to_markdown("output/estimated_moments.md")
