@@ -7,6 +7,7 @@ import pandas as pd
 import xml.etree.ElementTree as ET
 
 from matching import MatchingModel, Data
+from dupuy_galichon_2022 import variable_names, dupuy_galichon_estimates
 
 # Increase precision to 64 bit
 jax.config.update("jax_enable_x64", True)
@@ -88,23 +89,6 @@ print("=" * 80)
 print("Summary Statistics Table")
 print("=" * 80)
 
-variable_names = {
-    "wage": "Wage (hourly)",
-    "x_yrseduc": "Years of schooling",
-    "x_exp": "Years of experience",
-    "x_ethn": "Ethnicity",
-    "x_sex": "Female",
-    "x_union": "Union",
-    "x_lma": "Local labor market",
-    "x_region": "Region",
-    "x_married": "Married",
-    "x_white": "White",
-    "x_black": "Black",
-    "x_asian": "Asian",
-    "y_risk_rateh_occind_ave": "Risk (per 100,000) ",
-    "y_public": "Public",
-    "y_hospital": "Hospital",
-}
 variables_to_describe = [
     "wage",
     "x_yrseduc",
@@ -249,29 +233,6 @@ estimates = model.fit(guess, data, maxiter=1, verbose=True)
 mp = model.extract_model_parameters(estimates, transform=True)
 estimates_transformed = model.class2vec(mp, transform=False)
 
-dupuy_galichon_parameters = [
-    0.057,
-    0.084,
-    -0.404,
-    0.050,
-    0.046,
-    -0.108,
-    -0.069,
-    -0.051,
-    -0.059,
-    0.074,
-    -2.388,
-    0.838,
-    0.096,
-    0.548,
-    -0.023,
-    -0.062,
-    0.081,
-    2.981,
-    0.046,
-    2.233,
-]
-
 
 print("=" * 80)
 print("Parameter Estimates")
@@ -280,7 +241,7 @@ if include_transfer_constant is True and include_scale_parameters is True:
     df_estimates = pd.DataFrame(
         {
             "name": parameter_names,
-            "Dupuy-Galichon (2022)": dupuy_galichon_parameters,
+            "Dupuy-Galichon (2022)": dupuy_galichon_estimates,
             "Andersen (2025)": estimates_transformed,
         }
     )
