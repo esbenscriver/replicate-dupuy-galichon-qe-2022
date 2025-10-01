@@ -14,6 +14,7 @@ jax.config.update("jax_enable_x64", True)
 include_transfer_constant = True
 include_scale_parameters = True
 
+
 def normalize_variables(variables):
     return (variables - np.mean(variables, axis=0, keepdims=True)) / np.std(
         variables, axis=0, keepdims=True
@@ -104,7 +105,18 @@ variable_names = {
     "y_public": "Public",
     "y_hospital": "Hospital",
 }
-variables_to_describe = ["wage", "x_yrseduc", "x_exp", "x_sex", "x_married", "x_white", "x_black", "x_asian", "y_risk_rateh_occind_ave", "y_public"]
+variables_to_describe = [
+    "wage",
+    "x_yrseduc",
+    "x_exp",
+    "x_sex",
+    "x_married",
+    "x_white",
+    "x_black",
+    "x_asian",
+    "y_risk_rateh_occind_ave",
+    "y_public",
+]
 
 summary_stats = df[variables_to_describe].describe().T
 summary_stats = summary_stats.round(2)
@@ -186,10 +198,10 @@ covariate_names = [
 model = MatchingModel(
     covariates_X=covariates_X[None, :, :],
     covariates_Y=covariates_Y[:, None, :],
-
-    marginal_distribution_X=jnp.ones((1, covariates_X.shape[0])) / covariates_X.shape[0],
-    marginal_distribution_Y=jnp.ones((covariates_Y.shape[0], 1)) / covariates_Y.shape[0],
-
+    marginal_distribution_X=jnp.ones((1, covariates_X.shape[0]))
+    / covariates_X.shape[0],
+    marginal_distribution_Y=jnp.ones((covariates_Y.shape[0], 1))
+    / covariates_Y.shape[0],
     continuous_distributed_attributes=True,
     include_transfer_constant=include_transfer_constant,
     include_scale_parameters=include_scale_parameters,
@@ -238,10 +250,26 @@ mp = model.extract_model_parameters(estimates, transform=True)
 estimates_transformed = model.class2vec(mp, transform=False)
 
 dupuy_galichon_parameters = [
-    0.057, 0.084, -0.404, 0.050, 0.046, -0.108, -0.069, -0.051, 
-    -0.059, 0.074, -2.388, 0.838, 0.096, 0.548, 
-    -0.023, -0.062, 0.081, 
-    2.981, 0.046, 2.233
+    0.057,
+    0.084,
+    -0.404,
+    0.050,
+    0.046,
+    -0.108,
+    -0.069,
+    -0.051,
+    -0.059,
+    0.074,
+    -2.388,
+    0.838,
+    0.096,
+    0.548,
+    -0.023,
+    -0.062,
+    0.081,
+    2.981,
+    0.046,
+    2.233,
 ]
 
 
@@ -275,12 +303,16 @@ print(f"Number of estimated parameters: {len(df_estimates)}\n")
 
 variance, mean = model.compute_moments(estimates, data)
 
-df_moments = pd.DataFrame(
-    {
-        "name": ['mean','variance'],
-        "estimates": jnp.asarray([mean, variance]),
-    }
-).set_index("name").round(3)
+df_moments = (
+    pd.DataFrame(
+        {
+            "name": ["mean", "variance"],
+            "estimates": jnp.asarray([mean, variance]),
+        }
+    )
+    .set_index("name")
+    .round(3)
+)
 print("=" * 80)
 print("Estimated Moments of Measurement Errors")
 print("=" * 80)

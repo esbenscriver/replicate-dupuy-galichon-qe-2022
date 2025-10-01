@@ -21,9 +21,7 @@ covariates_Y = jax.random.normal(jax.random.PRNGKey(212), (X, Y, M))
 marginal_distribution_X = jnp.ones((X, 1)) / X
 marginal_distribution_Y = jnp.ones((1, Y)) / Y
 
-assert jnp.isclose(
-    jnp.sum(marginal_distribution_X), jnp.sum(marginal_distribution_Y)
-)
+assert jnp.isclose(jnp.sum(marginal_distribution_X), jnp.sum(marginal_distribution_Y))
 
 # Simulate parameters
 beta_X = jax.random.uniform(jax.random.PRNGKey(311), (N,))
@@ -36,7 +34,7 @@ else:
     sigma_X = jnp.asarray([1.0])
     sigma_Y = jnp.asarray([1.0])
 
-transfer_constant = jnp.asarray([1.0]   )
+transfer_constant = jnp.asarray([1.0])
 
 # set mean and variance of measurement errors
 mu, sigma = transfer_constant, 0.001
@@ -47,13 +45,11 @@ errors = mu + jnp.sqrt(sigma) * jax.random.normal(jax.random.PRNGKey(111), (X, Y
 model = MatchingModel(
     covariates_X=covariates_X,
     covariates_Y=covariates_Y,
-
-    marginal_distribution_X = marginal_distribution_X,
-    marginal_distribution_Y = marginal_distribution_Y,
-
-    continuous_distributed_attributes = False,
-    include_transfer_constant = include_transfer_constant,
-    include_scale_parameters = include_scale_parameters,
+    marginal_distribution_X=marginal_distribution_X,
+    marginal_distribution_Y=marginal_distribution_Y,
+    continuous_distributed_attributes=False,
+    include_transfer_constant=include_transfer_constant,
+    include_scale_parameters=include_scale_parameters,
 )
 parameter_names_X = [f"beta_X {n}" for n in range(N)]
 parameter_names_Y = [f"beta_Y {m}" for m in range(M)]
@@ -76,12 +72,13 @@ parameter_values = model.class2vec(mp_true, transform=False)
 parameter_values_transformed = model.class2vec(mp_true, transform=True)
 
 utility_X, utility_Y = model.Utilities_of_agents(mp_true)
-transfer = model.solve(utility_X=utility_X, utility_Y=utility_Y, mp=mp_true, verbose=False)
+transfer = model.solve(
+    utility_X=utility_X, utility_Y=utility_Y, mp=mp_true, verbose=False
+)
 observed_treansfer = transfer + errors
 
 data = Data(
-    transfers=observed_treansfer, 
-    matches=jnp.ones_like(observed_treansfer, dtype=float)
+    transfers=observed_treansfer, matches=jnp.ones_like(observed_treansfer, dtype=float)
 )
 
 guess = jnp.zeros_like(parameter_values)
@@ -93,8 +90,21 @@ estimates_transformed = model.class2vec(mp_estim, transform=False)
 # Print estimated parameters
 print(
     tabulate(
-        list(zip(parameter_names, parameter_values, guess, estimates, estimates_transformed)),
-        headers=["True parameter values", "Parameter guess", "Parameter estimates", "Transformed estimates"],
+        list(
+            zip(
+                parameter_names,
+                parameter_values,
+                guess,
+                estimates,
+                estimates_transformed,
+            )
+        ),
+        headers=[
+            "True parameter values",
+            "Parameter guess",
+            "Parameter estimates",
+            "Transformed estimates",
+        ],
         tablefmt="grid",
     )
 )
@@ -113,7 +123,7 @@ df_estimates = pd.DataFrame(
 
 variance, mean = model.compute_moments(estimates, data)
 moment_estimates = jnp.asarray([mean, variance])
-moment_names = ['mean','variance']
+moment_names = ["mean", "variance"]
 
 # Print estimated mean and variance of measurement errors
 print(

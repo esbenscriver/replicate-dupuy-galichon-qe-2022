@@ -24,7 +24,7 @@ SolverTypes = (
 @dataclass
 class Data(Pytree, mutable=False):
     """Observed data
-    
+
     Attributes:
         transfers (Array): observed transfers
         matches (Array): observed matches
@@ -32,6 +32,7 @@ class Data(Pytree, mutable=False):
 
     transfers: Array
     matches: Array
+
 
 @dataclass
 class ModelParameters(Pytree, mutable=False):
@@ -150,9 +151,8 @@ class MatchingModel(Pytree, mutable=False):
         Returns:
             demand (Array): demand for inside options
         """
-        return (
-            self.marginal_distribution_X
-            * self.ChoiceProbabilities_X(transfer, utility_X, sigma_X)
+        return self.marginal_distribution_X * self.ChoiceProbabilities_X(
+            transfer, utility_X, sigma_X
         )
 
     def Demand_Y(self, transfer: Array, utility_Y: Array, sigma_Y) -> Array:
@@ -165,9 +165,8 @@ class MatchingModel(Pytree, mutable=False):
         Returns:
             demand (Array): demand for inside options
         """
-        return (
-            self.marginal_distribution_Y
-            * self.ChoiceProbabilities_Y(transfer, utility_Y, sigma_Y)
+        return self.marginal_distribution_Y * self.ChoiceProbabilities_Y(
+            transfer, utility_Y, sigma_Y
         )
 
     def UpdateTransfers(
@@ -188,15 +187,19 @@ class MatchingModel(Pytree, mutable=False):
             t_updated (Array): updated transfers
         """
         # Calculate demand for both sides of the market
-        demand_X = self.Demand_X(t_initial, utility_X, mp.sigma_X)  # type X's demand for type Y
-        demand_Y = self.Demand_Y(t_initial, utility_Y, mp.sigma_Y)  # type Y's demand for type X
+        demand_X = self.Demand_X(
+            t_initial, utility_X, mp.sigma_X
+        )  # type X's demand for type Y
+        demand_Y = self.Demand_Y(
+            t_initial, utility_Y, mp.sigma_Y
+        )  # type Y's demand for type X
 
         adjust_step = (mp.sigma_X * mp.sigma_Y) / (mp.sigma_X + mp.sigma_Y)
 
         # Update transfer
         t_updated = t_initial + adjust_step * jnp.log(demand_Y / demand_X)
         return t_updated - t_updated[0, 0]  # normalize transfers
-    
+
     def solve(
         self,
         utility_X: Array,
@@ -235,7 +238,9 @@ class MatchingModel(Pytree, mutable=False):
         # print(result.state)
         return result.params
 
-    def extract_model_parameters(self, params: Array, transform: bool = True) -> ModelParameters:
+    def extract_model_parameters(
+        self, params: Array, transform: bool = True
+    ) -> ModelParameters:
         """Extract and store model parameters
 
         Args:
@@ -259,17 +264,17 @@ class MatchingModel(Pytree, mutable=False):
             transfer_constant = jnp.asarray([0.0])
 
         if self.include_scale_parameters is True and transform is True:
-            sigma_X=jnp.exp(jnp.asarray([params[-2]]))
-            sigma_Y=jnp.exp(jnp.asarray([params[-1]]))
+            sigma_X = jnp.exp(jnp.asarray([params[-2]]))
+            sigma_Y = jnp.exp(jnp.asarray([params[-1]]))
         elif self.include_scale_parameters is True and transform is False:
-            sigma_X=jnp.asarray(params[-2])
-            sigma_Y=jnp.asarray(params[-1])
+            sigma_X = jnp.asarray(params[-2])
+            sigma_Y = jnp.asarray(params[-1])
         elif self.include_scale_parameters is False:
             sigma_X = jnp.asarray([1.0])
             sigma_Y = jnp.asarray([1.0])
         else:
             raise ValueError("include_scale_parameters must be True or False")
-        
+
         return ModelParameters(
             beta_X=beta_X,
             beta_Y=beta_Y,
@@ -277,7 +282,7 @@ class MatchingModel(Pytree, mutable=False):
             sigma_X=sigma_X,
             sigma_Y=sigma_Y,
         )
-    
+
     def class2vec(self, mp: ModelParameters, transform: bool) -> Array:
         """Transform model parameters from ModelParameters class to vector
 
@@ -294,17 +299,14 @@ class MatchingModel(Pytree, mutable=False):
         if self.include_scale_parameters is True and transform is True:
             params = jnp.concatenate(
                 [
-                    params, 
-                    jnp.concatenate([jnp.log(mp.sigma_X), jnp.log(mp.sigma_Y)], axis=0)
+                    params,
+                    jnp.concatenate([jnp.log(mp.sigma_X), jnp.log(mp.sigma_Y)], axis=0),
                 ],
                 axis=0,
             )
         elif self.include_scale_parameters is True and transform is False:
             params = jnp.concatenate(
-                [
-                    params, 
-                    jnp.concatenate([mp.sigma_X, mp.sigma_Y], axis=0)
-                ],
+                [params, jnp.concatenate([mp.sigma_X, mp.sigma_Y], axis=0)],
                 axis=0,
             )
         elif self.include_scale_parameters is False:
@@ -348,10 +350,10 @@ class MatchingModel(Pytree, mutable=False):
         mu = jnp.mean(error)
 
         if self.include_transfer_constant is True:
-            return jnp.mean(error ** 2), mu
+            return jnp.mean(error**2), mu
         else:
             return jnp.mean((error - mu) ** 2), mu
-        
+
     def compute_moments(self, params: Array, data: Data) -> tuple[Array, Array]:
         """Computes the mean and variance of the measurement errors
 
@@ -360,9 +362,9 @@ class MatchingModel(Pytree, mutable=False):
             data (Data): observed data
 
         Returns:
-        mu (Array): 
+        mu (Array):
             mean of measurement error
-        sigma^2 (Array): 
+        sigma^2 (Array):
             variance of measurement error
         """
         mp = self.extract_model_parameters(params)
@@ -376,7 +378,7 @@ class MatchingModel(Pytree, mutable=False):
             model_transfer = transfer
 
         return self.moments_of_measurement_error(model_transfer, data.transfers)
-    
+
     def neg_log_likelihood(self, params: Array, data: Data) -> Array:
         """Computes the negative log-likelihood function
 
@@ -406,16 +408,13 @@ class MatchingModel(Pytree, mutable=False):
         log_lik_transfer = -jnp.log(
             self.moments_of_measurement_error(model_transfer, data.transfers)[0]
         ) * (data.transfers.size / 2)
-        log_lik_matched_X = jnp.sum(
-            data.matches * jnp.log(pX)
-        )
-        log_lik_matched_Y = jnp.sum(
-            data.matches * jnp.log(pY)
-        )
+        log_lik_matched_X = jnp.sum(data.matches * jnp.log(pX))
+        log_lik_matched_Y = jnp.sum(data.matches * jnp.log(pY))
 
-        neg_log_lik = -(
-            log_lik_transfer + log_lik_matched_X + log_lik_matched_Y
-        ) / number_of_observations
+        neg_log_lik = (
+            -(log_lik_transfer + log_lik_matched_X + log_lik_matched_Y)
+            / number_of_observations
+        )
 
         return neg_log_lik
 
