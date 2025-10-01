@@ -116,7 +116,7 @@ print(f"Number of observations: {len(df)}")
 print(f"Number of variables: {len(df.columns)}\n")
 
 # Save summary statistics to Markdown files
-summary_stats.to_markdown("output/summary_stats.md")
+summary_stats.to_markdown("output/summary_stats.md", floatfmt=".2f")
 
 none_dummy_columns = ["x_yrseduc", "x_exp", "y_risk_rateh_occind_ave"]
 
@@ -200,7 +200,7 @@ if model.include_transfer_constant is True:
     parameter_names += ["salary constant"]
 
 if model.include_scale_parameters is True:
-    parameter_names += ["scale (X)", "scale (Y)"]
+    parameter_names += ["scale parameter (workers)", "scale parameter (firms)"]
 
 df_covariate_stats = pd.DataFrame(
     {
@@ -213,7 +213,7 @@ df_covariate_stats = pd.DataFrame(
 )
 df_covariate_stats = df_covariate_stats.set_index("name")
 df_covariate_stats = df_covariate_stats.round(3)
-df_covariate_stats.to_markdown("output/covariate_stats.md")
+df_covariate_stats.to_markdown("output/covariate_stats.md", floatfmt=".3f")
 print("=" * 80)
 print("Covariate Statistics Table")
 print("=" * 80)
@@ -259,7 +259,7 @@ if include_transfer_constant is True and include_scale_parameters is True:
     df_estimates = df_estimates.round(3)
     df_estimates = df_estimates.set_index("name")
     print(df_estimates)
-    df_estimates.to_markdown("output/estimates.md")
+    df_estimates.to_markdown("output/estimates.md", floatfmt=".3f")
 else:
     df_estimates = pd.DataFrame(
         {
@@ -288,4 +288,4 @@ print(df_moments)
 print("=" * 80)
 
 if include_transfer_constant is True and include_scale_parameters is True:
-    df_estimates.to_markdown("output/estimated_moments.md")
+    df_estimates.to_markdown("output/estimated_moments.md", floatfmt=".3f")
