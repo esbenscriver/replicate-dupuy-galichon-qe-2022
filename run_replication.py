@@ -7,7 +7,11 @@ import pandas as pd
 import xml.etree.ElementTree as ET
 
 from matching import MatchingModel, Data
-from dupuy_galichon_2022 import variable_names, dupuy_galichon_estimates
+from dupuy_galichon_2022 import (
+    variable_names,
+    covariate_names,
+    dupuy_galichon_estimates,
+)
 
 # Increase precision to 64 bit
 jax.config.update("jax_enable_x64", True)
@@ -158,26 +162,6 @@ covariates_X = jnp.concatenate(
 )
 
 covariates = jnp.concatenate([covariates_Y, covariates_X], axis=1)
-
-covariate_names = [
-    "Years of schooling",
-    "Years of experience",
-    "Female",
-    "Married",
-    "White",
-    "Black",
-    "Asian",
-    "Years of experience (squared)",
-    "Risk x Years of schooling",
-    "Public x Years of schooling",
-    "Risk x Years of experience",
-    "Public x Years of experience",
-    "Risk x Females",
-    "Public x Females",
-    "Risk",
-    "Public",
-    "Public x Years of schooling",
-]
 
 model = MatchingModel(
     covariates_X=covariates_X[None, :, :],

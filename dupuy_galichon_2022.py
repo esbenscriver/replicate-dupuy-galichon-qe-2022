@@ -16,6 +16,26 @@ variable_names = {
     "y_hospital": "Hospital",
 }
 
+covariate_names = [
+    "Years of schooling",
+    "Years of experience",
+    "Female",
+    "Married",
+    "White",
+    "Black",
+    "Asian",
+    "Years of experience (squared)",
+    "Risk x Years of schooling",
+    "Public x Years of schooling",
+    "Risk x Years of experience",
+    "Public x Years of experience",
+    "Risk x Females",
+    "Public x Females",
+    "Risk",
+    "Public",
+    "Public x Years of schooling",
+]
+
 dupuy_galichon_estimates = [
     0.057,
     0.084,
