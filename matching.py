@@ -345,7 +345,7 @@ class MatchingModel(Pytree, mutable=False):
             mu (Array): mean of the measurement error
             sigma^2 (Array): variance of the measurement error
         """
-        error = model_transfer - observed_transfer
+        error = observed_transfer - model_transfer
 
         mu = jnp.mean(error)
 
@@ -422,7 +422,7 @@ class MatchingModel(Pytree, mutable=False):
         self,
         guess: Array,
         data: Data,
-        tol: float = 1e-8,
+        tol: float = 1e-6,
         maxiter: int = 1_000,
         verbose: bool | int = True,
     ) -> Array:

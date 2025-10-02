@@ -8,16 +8,37 @@ from matching import MatchingModel, Data, ModelParameters
 # Increase precision to 64 bit
 jax.config.update("jax_enable_x64", True)
 
-include_transfer_constant = True
+include_transfer_constant = False
 include_scale_parameters = True
+
+simulate_marginal_distributions = True
 
 # Set dimensions
 X, Y, N, M = 50, 30, 5, 3
 
-covariates_X = jax.random.normal(jax.random.PRNGKey(211), (X, Y, N))
-covariates_Y = jax.random.normal(jax.random.PRNGKey(212), (X, Y, M))
-marginal_distribution_X = jnp.ones((X, 1)) / X
-marginal_distribution_Y = jnp.ones((1, Y)) / Y
+print("=" * 80)
+print("Simulation Settings")
+print("=" * 80)
+print(f"Number of worker types: {X}")
+print(f"Number of firm types: {Y}")
+print(f"Number of worker covariates: {N}")
+print(f"Number of firm covariates: {M}")
+print(f"Include transfer constant: {include_transfer_constant}")
+print(f"Include scale parameters: {include_scale_parameters}")
+print(f"Simulate marginal distributions: {simulate_marginal_distributions}")
+print("=" * 80)
+
+covariates_X = jax.random.normal(jax.random.PRNGKey(111), (X, Y, N))
+covariates_Y = jax.random.normal(jax.random.PRNGKey(112), (X, Y, M))
+
+if simulate_marginal_distributions is True:
+    m_X = jax.random.uniform(jax.random.PRNGKey(211), (X, 1))
+    m_Y = jax.random.uniform(jax.random.PRNGKey(212), (1, Y))
+    marginal_distribution_X = m_X / jnp.sum(m_X)
+    marginal_distribution_Y = m_Y / jnp.sum(m_Y)
+else:
+    marginal_distribution_X = jnp.ones((X, 1)) / X
+    marginal_distribution_Y = jnp.ones((1, Y)) / Y
 
 assert jnp.isclose(jnp.sum(marginal_distribution_X), jnp.sum(marginal_distribution_Y))
 
@@ -35,17 +56,20 @@ else:
 transfer_constant = jnp.asarray([1.0])
 
 # set mean and variance of measurement errors
-mu, sigma = transfer_constant, jnp.asarray([0.001])
+mu, sigma = transfer_constant, jnp.asarray([0.01])
 
 # Simulate data
-errors = mu + jnp.sqrt(sigma) * jax.random.normal(jax.random.PRNGKey(111), (X, Y))
+errors = mu + jnp.sqrt(sigma) * jax.random.normal(jax.random.PRNGKey(411), (X, Y))
 
 model = MatchingModel(
     covariates_X=covariates_X,
     covariates_Y=covariates_Y,
+
     marginal_distribution_X=marginal_distribution_X,
     marginal_distribution_Y=marginal_distribution_Y,
+
     continuous_distributed_attributes=False,
+
     include_transfer_constant=include_transfer_constant,
     include_scale_parameters=include_scale_parameters,
 )
@@ -69,21 +93,36 @@ mp_true = ModelParameters(
 parameter_values = model.class2vec(mp_true, transform=False)
 parameter_values_transformed = model.class2vec(mp_true, transform=True)
 
+# Solve model given true parameters
 utility_X, utility_Y = model.Utilities_of_agents(mp_true)
 transfer = model.solve(
     utility_X=utility_X, utility_Y=utility_Y, mp=mp_true, verbose=False
 )
+
+# Simulate observed data
+observed_matches_X = model.Demand_X(
+    transfer=transfer, utility_X=utility_X, sigma_X=mp_true.sigma_X
+)
+observed_matches_Y = model.Demand_Y(
+    transfer=transfer, utility_Y=utility_Y, sigma_Y=mp_true.sigma_Y
+)
+assert jnp.allclose(observed_matches_X, observed_matches_Y)
 observed_treansfer = transfer + errors
 
-data = Data(
-    transfers=observed_treansfer, matches=jnp.ones_like(observed_treansfer, dtype=float)
-)
+data = Data(transfers=observed_treansfer, matches=observed_matches_X)
 
-guess = jnp.zeros_like(parameter_values)
+guess = jnp.ones(len(parameter_names_X + parameter_names_Y))
+if model.include_transfer_constant is True:
+    guess = jnp.concatenate([guess, jnp.array([0.0])], axis=0)
 
-estimates = model.fit(guess, data, maxiter=1, verbose=False)
-mp_estim = model.extract_model_parameters(estimates, transform=True)
-estimates_transformed = model.class2vec(mp_estim, transform=False)
+if model.include_scale_parameters is True:
+    guess = jnp.concatenate([guess, jnp.array([0.0, 0.0])], axis=0)
+
+estimates_transformed = model.fit(guess, data, maxiter=100, verbose=True)
+variance, mean = model.compute_moments(estimates_transformed, data)
+
+mp_estim = model.extract_model_parameters(estimates_transformed, transform=True)
+estimates = model.class2vec(mp_estim, transform=False)
 
 print("=" * 80)
 print("Parameter Estimates")
@@ -92,25 +131,24 @@ df_estimates = (
         pd.DataFrame(
         {
             "name": parameter_names,
-            "true parameters": parameter_values_transformed,
-            "estimated parameters": estimates_transformed,
+            "true parameters": parameter_values,
+            "estimated parameters": estimates,
         }
     )
     .round(3)
     .set_index("name")
+    .rename_axis(None)
 )
 print(df_estimates)
 print("=" * 80)
-print(f"Number of estimated parameters: {len(df_estimates)}")
+print(f"Number of estimated parameters: {len(estimates_transformed)}")
 print(f"number of observations: {observed_treansfer.size}\n")
 
 print(f"{model.neg_log_likelihood(parameter_values_transformed, data) = }")
-print(f"{model.neg_log_likelihood(estimates, data) = }\n")
-
-variance, mean = model.compute_moments(estimates, data)
+print(f"{model.neg_log_likelihood(estimates_transformed, data) = }\n")
 
 print("=" * 80)
-print("Estimated moments")
+print("Estimated Moments of Measurement Errors")
 print("=" * 80)
 df_moments = (
     pd.DataFrame(
@@ -120,8 +158,9 @@ df_moments = (
             "estimated parameters": jnp.asarray([mean, variance]),
         }
     )
-    .set_index("name")
     .round(3)
+    .set_index("name")
+    .rename_axis(None)
 )
 print(df_moments)
 print("=" * 80)
