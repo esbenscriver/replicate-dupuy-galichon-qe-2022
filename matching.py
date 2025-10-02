@@ -267,8 +267,12 @@ class MatchingModel(Pytree, mutable=False):
         # sigma_X = jnp.exp(jnp.asarray([params[-2]]))
         # sigma_Y = jnp.exp(jnp.asarray([params[-1]]))
 
-        sigma_X = jnp.asarray([params[-2]])
-        sigma_Y = jnp.asarray([params[-1]])
+        if self.include_scale_parameters is True:
+            sigma_X = jnp.asarray([params[-2]])
+            sigma_Y = jnp.asarray([params[-1]])
+        else:
+            sigma_X = jnp.asarray([1.0])
+            sigma_Y = jnp.asarray([1.0])
 
         # if self.include_scale_parameters is True and transform is True:
         #     sigma_X = jnp.exp(jnp.asarray([params[-2]]))
@@ -312,10 +316,11 @@ class MatchingModel(Pytree, mutable=False):
         #     axis=0,
         # )
 
-        params = jnp.concatenate(
-            [params, jnp.concatenate([mp.sigma_X, mp.sigma_Y], axis=0)],
-            axis=0,
-        )
+        if self.include_scale_parameters is True:
+            params = jnp.concatenate(
+                [params, jnp.concatenate([mp.sigma_X, mp.sigma_Y], axis=0)],
+                axis=0,
+            )
 
         # if self.include_scale_parameters is True and transform is True:
         #     params = jnp.concatenate(
@@ -399,7 +404,7 @@ class MatchingModel(Pytree, mutable=False):
             model_transfer = transfer
 
         return self.moments_of_measurement_error(model_transfer, data.transfers)
-
+    
     def neg_log_likelihood(self, params: Array, data: Data) -> Array:
         """Computes the negative log-likelihood function
 
@@ -460,14 +465,16 @@ class MatchingModel(Pytree, mutable=False):
             params (Array): parameter estimates
         """
         assert jnp.isclose(jnp.sum(self.marginal_distribution_X), jnp.sum(self.marginal_distribution_Y))
+
         result = minimize(
             lambda x: self.neg_log_likelihood(x, data), 
             guess,
             method='BFGS',
             tol=tol, 
-            options=None,
+            options={'maxiter': maxiter},
         )
-        print(f"{result = }")
+        print(f"\niterations: {result.nit}, success: {result.success}, status: {result.status}, final gradient norm: {jnp.linalg.norm(result.jac)}")
+        print(f"\nGradients:\n {result.jac}\n")
         return result.x
 
         # result = BFGS(
@@ -477,4 +484,6 @@ class MatchingModel(Pytree, mutable=False):
         #     verbose=verbose,
         #     jit=False,
         # ).run(guess, data)
+        # print(f"\niterations: {result.state.iter_num}, final gradient norm: {jnp.linalg.norm(result.state.grad)}")
+        # print(f"\nGradients:\n {result.state.grad}\n")
         # return result.params

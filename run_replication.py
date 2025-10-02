@@ -90,7 +90,7 @@ for col in numeric_columns:
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
 # Create summary statistics table
-print("=" * 80)
+print("\n" + "=" * 80)
 print("Summary Statistics Table")
 print("=" * 80)
 
@@ -200,17 +200,17 @@ if model.include_scale_parameters is True:
     # guess = jnp.concatenate([guess, jnp.log(jnp.array([1.0, 1.0]))], axis=0)
     guess = jnp.concatenate([guess, jnp.array([1.0, 1.0])], axis=0)
 
-neg_log_lik = model.neg_log_likelihood(guess, data)
-print(f"{neg_log_lik = }")
+print(f"\nlogL(guess)={-model.neg_log_likelihood(guess, data)}")
 
 estimates_transformed = model.fit(guess, data, maxiter=1000, verbose=True)
 mp = model.extract_model_parameters(estimates_transformed, transform=True)
 estimates = model.class2vec(mp, transform=False)
 
-print("\n"+"=" * 80)
-print("Parameter Estimates")
-print("=" * 80)
+print(f"\nlogL(estimates)={-model.neg_log_likelihood(estimates, data)}")
+
 if include_transfer_constant is True and include_scale_parameters is True:
+    dupuy_galichon_estimates = jnp.asarray(dupuy_galichon_estimates)
+    print(f"\nlogL(dupuy_galichon_estimates)={-model.neg_log_likelihood(dupuy_galichon_estimates, data)}")
     df_estimates = (
         pd.DataFrame(
             {
@@ -223,21 +223,22 @@ if include_transfer_constant is True and include_scale_parameters is True:
         .set_index("name")
         .rename_axis(None)
     )
-    print(df_estimates)
-    df_estimates.to_markdown("output/estimates.md", floatfmt=".3f")
 else:
     df_estimates = (
         pd.DataFrame(
             {
                 "name": parameter_names,
-                "Andersen (2025)": estimates,
+                "estimates": estimates,
             }
         )
         .round(3)
         .set_index("name")
         .rename_axis(None)
     )
-    print(df_estimates)
+print("\n"+"=" * 80)
+print("Parameter Estimates")
+print("=" * 80)
+print(df_estimates)
 print("=" * 80)
 print(f"Number of estimated parameters: {len(df_estimates)}\n")
 
@@ -261,4 +262,8 @@ print(df_moments)
 print("=" * 80)
 
 if include_transfer_constant is True and include_scale_parameters is True:
+    df_estimates.to_markdown("output/estimates.md", floatfmt=".3f")
     df_moments.to_markdown("output/estimated_moments.md", floatfmt=".3f")
+else:
+    df_estimates.to_markdown(f"output/estimated_parameters_constant_{include_transfer_constant}_scale_{include_scale_parameters}.md", floatfmt=".3f")
+    df_moments.to_markdown(f"output/estimated_moments_constant_{include_transfer_constant}_scale_{include_scale_parameters}.md", floatfmt=".3f")

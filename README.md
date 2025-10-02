@@ -5,9 +5,9 @@ This project aims at replicating the empirical results of [Dupuy and Galichon (2
 ## Replication of descriptive statistics
 Below, we have succesfully replicated the descriptive statistics of Dupuy and Galichon (2022).
 
-|                     |   mean |   std |   min |    max |
+|                     |   Mean |   Std |   Min |    Max |
 |:--------------------|-------:|------:|------:|-------:|
-| Wage (hourly)       |  17.95 |  9.02 |  3.75 |  70.00 |
+| Workers             |        |       |       |        |
 | Years of schooling  |  13.35 |  2.24 |  1.00 |  21.00 |
 | Years of experience |  20.67 | 12.97 |  0.00 |  51.00 |
 | Female              |   0.52 |  0.50 |  0.00 |   1.00 |
@@ -15,6 +15,8 @@ Below, we have succesfully replicated the descriptive statistics of Dupuy and Ga
 | White               |   0.63 |  0.48 |  0.00 |   1.00 |
 | Black               |   0.12 |  0.32 |  0.00 |   1.00 |
 | Asian               |   0.06 |  0.24 |  0.00 |   1.00 |
+| Wage (hourly)       |  17.95 |  9.02 |  3.75 |  70.00 |
+| Firms               |        |       |       |        |
 | Risk (per 100,000)  |   3.44 | 13.05 |  0.00 | 345.70 |
 | Public              |   0.12 |  0.33 |  0.00 |   1.00 |
 

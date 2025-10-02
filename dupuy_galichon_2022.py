@@ -1,5 +1,4 @@
 variables_to_describe = [
-    "wage",
     "x_yrseduc",
     "x_exp",
     "x_sex",
@@ -7,12 +6,12 @@ variables_to_describe = [
     "x_white",
     "x_black",
     "x_asian",
+    "wage",
     "y_risk_rateh_occind_ave",
     "y_public",
 ]
 
 variable_names = {
-    "wage": "Wage (hourly)",
     "x_yrseduc": "Years of schooling",
     "x_exp": "Years of experience",
     "x_ethn": "Ethnicity",
@@ -24,6 +23,7 @@ variable_names = {
     "x_white": "White",
     "x_black": "Black",
     "x_asian": "Asian",
+    "wage": "Wage (hourly)",
     "y_risk_rateh_occind_ave": "Risk (per 100,000) ",
     "y_public": "Public",
     "y_hospital": "Hospital",

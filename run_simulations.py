@@ -116,7 +116,9 @@ if model.include_transfer_constant is True:
     guess = jnp.concatenate([guess, jnp.array([0.0])], axis=0)
 
 if model.include_scale_parameters is True:
-    guess = jnp.concatenate([guess, jnp.array([0.0, 0.0])], axis=0)
+    guess = jnp.concatenate([guess, jnp.array([1.0, 1.0])], axis=0)
+
+print(f"\n{model.neg_log_likelihood(guess, data) = }\n")
 
 estimates_transformed = model.fit(guess, data, maxiter=100, verbose=True)
 variance, mean = model.compute_moments(estimates_transformed, data)
