@@ -17,15 +17,15 @@ Z, N, M = 1000, 5, 3
 print("\n" + "=" * 80)
 print("Simulation Settings")
 print("=" * 80)
-print(f"Number of matches: {Z}")
+print(f"Number of observations: {Z}")
 print(f"Number of worker covariates: {N}")
 print(f"Number of firm covariates: {M}")
 print(f"Include transfer constant: {include_transfer_constant}")
 print(f"Include scale parameters: {include_scale_parameters}")
 print("=" * 80)
 
-covariates_X = jax.random.normal(jax.random.PRNGKey(111), (1, Z, N))
-covariates_Y = jax.random.normal(jax.random.PRNGKey(112), (Z, 1, M))
+covariates_X = jax.random.normal(jax.random.PRNGKey(111), (Z, Z, N))
+covariates_Y = jax.random.normal(jax.random.PRNGKey(112), (Z, Z, M))
 
 marginal_distribution_X = jnp.ones((Z, 1)) / Z
 marginal_distribution_Y = jnp.ones((1, Z)) / Z
@@ -33,8 +33,8 @@ marginal_distribution_Y = jnp.ones((1, Z)) / Z
 assert jnp.isclose(jnp.sum(marginal_distribution_X), jnp.sum(marginal_distribution_Y))
 
 # Simulate parameters
-beta_X = jax.random.uniform(jax.random.PRNGKey(311), (N,))
-beta_Y = -jax.random.uniform(jax.random.PRNGKey(312), (M,))
+beta_X = -jax.random.uniform(jax.random.PRNGKey(211), (N,))
+beta_Y = jax.random.uniform(jax.random.PRNGKey(212), (M,))
 
 if include_scale_parameters is True:
     sigma_X = jnp.asarray([2.00])
@@ -43,13 +43,13 @@ else:
     sigma_X = jnp.asarray([1.0])
     sigma_Y = jnp.asarray([1.0])
 
-transfer_constant = jnp.asarray([1.0])
+transfer_constant = jnp.asarray([0.0])
 
 # set mean and variance of measurement errors
 mu, sigma = transfer_constant, jnp.asarray([0.01])
 
 # Simulate data
-errors = mu + jnp.sqrt(sigma) * jax.random.normal(jax.random.PRNGKey(411), (Z,))
+errors = mu + jnp.sqrt(sigma) * jax.random.normal(jax.random.PRNGKey(311), (Z,))
 
 model = MatchingModel(
     covariates_X=covariates_X,
@@ -83,11 +83,17 @@ parameter_values_transformed = model.class2vec(mp_true, transform=True)
 # Solve model given true parameters
 utility_X, utility_Y = model.Utilities_of_agents(mp_true)
 transfer = model.solve(
-    utility_X=utility_X, utility_Y=utility_Y, mp=mp_true, verbose=False
+    utility_X=utility_X, utility_Y=utility_Y, mp=mp_true, verbose=True
 )
+# print(f"utility_X:\n{utility_X}")
+# print(f"utility_Y:\n{utility_Y}")
+# print(f"transfer:\n{transfer}")
+# print(f"payoff_X:\n{model.Payoff_X(transfer, utility_X, sigma_X)}")
+# print(f"payoff_Y:\n{model.Payoff_Y(transfer, utility_Y, sigma_Y)}")
 
 # Simulate observed data
 observed_treansfer = jnp.diag(transfer) + errors
+# print(f"observed_treansfer:\n{observed_treansfer}")
 
 data = Data(
     transfers=observed_treansfer, matches=jnp.ones_like(observed_treansfer, dtype=float)
@@ -100,7 +106,7 @@ if model.include_transfer_constant is True:
 if model.include_scale_parameters is True:
     guess = jnp.concatenate([guess, jnp.array([1.0, 1.0])], axis=0)
 
-print(f"\n{model.neg_log_likelihood(guess, data) = }\n")
+print(f"\nlogL(guess)={-model.neg_log_likelihood(guess, data)}\n")
 
 estimates_transformed = model.fit(guess, data, maxiter=100, verbose=True)
 variance, mean = model.compute_moments(estimates_transformed, data)
@@ -108,43 +114,42 @@ variance, mean = model.compute_moments(estimates_transformed, data)
 mp_estim = model.extract_model_parameters(estimates_transformed, transform=True)
 estimates = model.class2vec(mp_estim, transform=False)
 
+# # Solve model given true parameters
+# utility_X, utility_Y = model.Utilities_of_agents(mp_estim)
+# estimated_transfer = model.solve(
+#     utility_X=utility_X, utility_Y=utility_Y, mp=mp_true, verbose=True
+# )
+# print(f"estimated transfer:\n{estimated_transfer}")
+
 print("\n" + "=" * 80)
 print("Parameter Estimates")
 print("=" * 80)
-df_estimates = (
-    pd.DataFrame(
-        {
-            "name": parameter_names,
-            "true parameters": parameter_values,
-            "estimated parameters": estimates,
-        }
-    )
-    .round(3)
-    .set_index("name")
-    .rename_axis(None)
-)
+df_estimates = pd.DataFrame(
+    {
+        "name": parameter_names,
+        "true parameters": parameter_values,
+        "estimated parameters": estimates,
+    }
+).round(3).set_index("name").rename_axis(None)
+
 print(df_estimates)
 print("=" * 80)
 print(f"Number of estimated parameters: {len(estimates_transformed)}")
 print(f"number of observations: {observed_treansfer.size}\n")
 
-print(f"{model.neg_log_likelihood(parameter_values_transformed, data) = }")
-print(f"{model.neg_log_likelihood(estimates_transformed, data) = }\n")
+print(f"\nlogL(parameter_values)={-model.neg_log_likelihood(parameter_values, data)}")
+print(f"logL(estimates)={-model.neg_log_likelihood(estimates, data)}\n")
 
 print("=" * 80)
 print("Estimated Moments of Measurement Errors")
 print("=" * 80)
-df_moments = (
-    pd.DataFrame(
-        {
-            "name": ["mean", "variance"],
-            "true parameters": jnp.concatenate([mu, sigma], axis=0),
-            "estimated parameters": jnp.asarray([mean, variance]),
-        }
-    )
-    .round(3)
-    .set_index("name")
-    .rename_axis(None)
-)
+df_moments = pd.DataFrame(
+    {
+        "name": ["mean", "variance"],
+        "true parameters": jnp.concatenate([mu, sigma], axis=0),
+        "estimated parameters": jnp.asarray([mean, variance]),
+    }
+).round(3).set_index("name").rename_axis(None)
+
 print(df_moments)
 print("=" * 80)

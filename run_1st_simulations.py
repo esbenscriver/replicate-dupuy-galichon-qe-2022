@@ -43,8 +43,8 @@ else:
 assert jnp.isclose(jnp.sum(marginal_distribution_X), jnp.sum(marginal_distribution_Y))
 
 # Simulate parameters
-beta_X = jax.random.uniform(jax.random.PRNGKey(311), (N,))
-beta_Y = -jax.random.uniform(jax.random.PRNGKey(312), (M,))
+beta_X = -jax.random.uniform(jax.random.PRNGKey(311), (N,))
+beta_Y = jax.random.uniform(jax.random.PRNGKey(312), (M,))
 
 if include_scale_parameters is True:
     sigma_X = jnp.asarray([2.00])

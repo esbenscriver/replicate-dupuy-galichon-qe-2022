@@ -128,6 +128,7 @@ y_public_index = 1
 x_yrseduc_index = 0
 
 observed_wage = jnp.log(jnp.asarray(df["wage"].to_numpy()))
+
 X_vars = jnp.asarray(df[X_columns].to_numpy())
 Y_vars = jnp.asarray(df[Y_columns].to_numpy())
 
@@ -148,6 +149,7 @@ covariates_X = jnp.concatenate(
     ],
     axis=1,
 )
+print(f"{covariates_X.shape=}, {covariates_Y.shape=}")
 
 covariates = jnp.concatenate([covariates_Y, covariates_X], axis=1)
 
@@ -170,20 +172,16 @@ if model.include_transfer_constant is True:
 if model.include_scale_parameters is True:
     parameter_names += ["Scale parameter (workers)", "Scale parameter (firms)"]
 
-df_covariate_stats = (
-    pd.DataFrame(
-        {
-            "name": covariate_names,
-            "mean": jnp.mean(covariates, axis=0),
-            "std": jnp.std(covariates, axis=0),
-            "min": jnp.min(covariates, axis=0),
-            "max": jnp.max(covariates, axis=0),
-        }
-    )
-    .round(3)
-    .set_index("name")
-    .rename_axis(None)
-)
+df_covariate_stats = pd.DataFrame(
+    {
+        "name": covariate_names,
+        "mean": jnp.mean(covariates, axis=0),
+        "std": jnp.std(covariates, axis=0),
+        "min": jnp.min(covariates, axis=0),
+        "max": jnp.max(covariates, axis=0),
+    }
+).round(3).set_index("name").rename_axis(None)
+
 df_covariate_stats.to_markdown("output/covariate_stats.md", floatfmt=".3f")
 print("=" * 80)
 print("Covariate Statistics Table")
@@ -215,30 +213,25 @@ if include_transfer_constant is True and include_scale_parameters is True:
     print(
         f"\nlogL(dupuy_galichon_estimates)={-model.neg_log_likelihood(dupuy_galichon_estimates, data)}"
     )
-    df_estimates = (
-        pd.DataFrame(
-            {
-                "name": parameter_names,
-                "Dupuy and Galichon (2022)": dupuy_galichon_estimates,
-                "Andersen (2025)": estimates,
-            }
-        )
-        .round(3)
-        .set_index("name")
-        .rename_axis(None)
+    df_estimates = pd.DataFrame(
+        {
+            "name": parameter_names,
+            "Dupuy and Galichon (2022)": dupuy_galichon_estimates,
+            "Andersen (2025)": estimates,
+        }
+    ).round(3).set_index("name").rename_axis(None)
+
+    print(
+        f"R^2 (Dupuy and Galichon (2022): {model.R_squared(dupuy_galichon_estimates, data)}"
+        + f", Andersen (2025): {model.R_squared(estimates, data)}\n"
     )
 else:
-    df_estimates = (
-        pd.DataFrame(
-            {
-                "name": parameter_names,
-                "estimates": estimates,
-            }
-        )
-        .round(3)
-        .set_index("name")
-        .rename_axis(None)
-    )
+    df_estimates = pd.DataFrame(
+        {
+            "name": parameter_names,
+            "estimates": estimates,
+        }
+    ).round(3).set_index("name").rename_axis(None)
 print("\n" + "=" * 80)
 print("Parameter Estimates")
 print("=" * 80)
@@ -248,17 +241,12 @@ print(f"Number of estimated parameters: {len(df_estimates)}\n")
 
 variance, mean = model.compute_moments(estimates, data)
 
-df_moments = (
-    pd.DataFrame(
-        {
-            "name": ["mean", "variance"],
-            "estimates": jnp.asarray([mean, variance]),
-        }
-    )
-    .round(3)
-    .set_index("name")
-    .rename_axis(None)
-)
+df_moments = pd.DataFrame(
+    {
+        "name": ["mean", "variance"],
+        "estimates": jnp.asarray([mean, variance]),
+    }
+).round(3).set_index("name").rename_axis(None)
 print("=" * 80)
 print("Estimated Moments of Measurement Errors")
 print("=" * 80)
