@@ -64,12 +64,9 @@ errors = mu + jnp.sqrt(sigma) * jax.random.normal(jax.random.PRNGKey(411), (X, Y
 model = MatchingModel(
     covariates_X=covariates_X,
     covariates_Y=covariates_Y,
-
     marginal_distribution_X=marginal_distribution_X,
     marginal_distribution_Y=marginal_distribution_Y,
-
     continuous_distributed_attributes=False,
-
     include_transfer_constant=include_transfer_constant,
     include_scale_parameters=include_scale_parameters,
 )
@@ -130,7 +127,7 @@ print("=" * 80)
 print("Parameter Estimates")
 print("=" * 80)
 df_estimates = (
-        pd.DataFrame(
+    pd.DataFrame(
         {
             "name": parameter_names,
             "true parameters": parameter_values,

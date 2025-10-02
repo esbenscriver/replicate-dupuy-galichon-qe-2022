@@ -154,14 +154,11 @@ covariates = jnp.concatenate([covariates_Y, covariates_X], axis=1)
 model = MatchingModel(
     covariates_X=covariates_X[None, :, :],
     covariates_Y=covariates_Y[:, None, :],
-
     marginal_distribution_X=jnp.ones((1, covariates_X.shape[0]))
     / covariates_X.shape[0],
     marginal_distribution_Y=jnp.ones((covariates_Y.shape[0], 1))
     / covariates_Y.shape[0],
-
     continuous_distributed_attributes=True,
-
     include_transfer_constant=include_transfer_constant,
     include_scale_parameters=include_scale_parameters,
 )
@@ -173,15 +170,20 @@ if model.include_transfer_constant is True:
 if model.include_scale_parameters is True:
     parameter_names += ["Scale parameter (workers)", "Scale parameter (firms)"]
 
-df_covariate_stats = pd.DataFrame(
-    {
-        "name": covariate_names,
-        "mean": jnp.mean(covariates, axis=0),
-        "std": jnp.std(covariates, axis=0),
-        "min": jnp.min(covariates, axis=0),
-        "max": jnp.max(covariates, axis=0),
-    }
-).round(3).set_index("name").rename_axis(None)
+df_covariate_stats = (
+    pd.DataFrame(
+        {
+            "name": covariate_names,
+            "mean": jnp.mean(covariates, axis=0),
+            "std": jnp.std(covariates, axis=0),
+            "min": jnp.min(covariates, axis=0),
+            "max": jnp.max(covariates, axis=0),
+        }
+    )
+    .round(3)
+    .set_index("name")
+    .rename_axis(None)
+)
 df_covariate_stats.to_markdown("output/covariate_stats.md", floatfmt=".3f")
 print("=" * 80)
 print("Covariate Statistics Table")
@@ -210,7 +212,9 @@ print(f"\nlogL(estimates)={-model.neg_log_likelihood(estimates, data)}")
 
 if include_transfer_constant is True and include_scale_parameters is True:
     dupuy_galichon_estimates = jnp.asarray(dupuy_galichon_estimates)
-    print(f"\nlogL(dupuy_galichon_estimates)={-model.neg_log_likelihood(dupuy_galichon_estimates, data)}")
+    print(
+        f"\nlogL(dupuy_galichon_estimates)={-model.neg_log_likelihood(dupuy_galichon_estimates, data)}"
+    )
     df_estimates = (
         pd.DataFrame(
             {
@@ -235,7 +239,7 @@ else:
         .set_index("name")
         .rename_axis(None)
     )
-print("\n"+"=" * 80)
+print("\n" + "=" * 80)
 print("Parameter Estimates")
 print("=" * 80)
 print(df_estimates)
@@ -265,5 +269,11 @@ if include_transfer_constant is True and include_scale_parameters is True:
     df_estimates.to_markdown("output/estimated_parameters.md", floatfmt=".3f")
     df_moments.to_markdown("output/estimated_moments.md", floatfmt=".3f")
 else:
-    df_estimates.to_markdown(f"output/estimated_parameters_constant_{include_transfer_constant}_scale_{include_scale_parameters}.md", floatfmt=".3f")
-    df_moments.to_markdown(f"output/estimated_moments_constant_{include_transfer_constant}_scale_{include_scale_parameters}.md", floatfmt=".3f")
+    df_estimates.to_markdown(
+        f"output/estimated_parameters_constant_{include_transfer_constant}_scale_{include_scale_parameters}.md",
+        floatfmt=".3f",
+    )
+    df_moments.to_markdown(
+        f"output/estimated_moments_constant_{include_transfer_constant}_scale_{include_scale_parameters}.md",
+        floatfmt=".3f",
+    )

@@ -404,7 +404,7 @@ class MatchingModel(Pytree, mutable=False):
             model_transfer = transfer
 
         return self.moments_of_measurement_error(model_transfer, data.transfers)
-    
+
     def neg_log_likelihood(self, params: Array, data: Data) -> Array:
         """Computes the negative log-likelihood function
 
@@ -464,16 +464,20 @@ class MatchingModel(Pytree, mutable=False):
         Returns:
             params (Array): parameter estimates
         """
-        assert jnp.isclose(jnp.sum(self.marginal_distribution_X), jnp.sum(self.marginal_distribution_Y))
+        assert jnp.isclose(
+            jnp.sum(self.marginal_distribution_X), jnp.sum(self.marginal_distribution_Y)
+        )
 
         result = minimize(
-            lambda x: self.neg_log_likelihood(x, data), 
+            lambda x: self.neg_log_likelihood(x, data),
             guess,
-            method='BFGS',
-            tol=tol, 
-            options={'maxiter': maxiter},
+            method="BFGS",
+            tol=tol,
+            options={"maxiter": maxiter},
         )
-        print(f"\niterations: {result.nit}, success: {result.success}, status: {result.status}, final gradient norm: {jnp.linalg.norm(result.jac)}")
+        print(
+            f"\niterations: {result.nit}, success: {result.success}, status: {result.status}, final gradient norm: {jnp.linalg.norm(result.jac)}"
+        )
         print(f"\nGradients:\n {result.jac}\n")
         return result.x
 
