@@ -262,7 +262,7 @@ print(df_moments)
 print("=" * 80)
 
 if include_transfer_constant is True and include_scale_parameters is True:
-    df_estimates.to_markdown("output/estimates.md", floatfmt=".3f")
+    df_estimates.to_markdown("output/estimated_parameters.md", floatfmt=".3f")
     df_moments.to_markdown("output/estimated_moments.md", floatfmt=".3f")
 else:
     df_estimates.to_markdown(f"output/estimated_parameters_constant_{include_transfer_constant}_scale_{include_scale_parameters}.md", floatfmt=".3f")
