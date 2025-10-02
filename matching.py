@@ -112,6 +112,33 @@ class MatchingModel(Pytree, mutable=False):
         """
         return jnp.einsum("ijk, k -> ij", covariates, parameters)
 
+    def Payoff_X(self, transfer: Array, utility_X: Array, sigma_X: Array) -> Array:
+        """Computes match-specific payoffs for agents of type X
+
+        Args:
+            transfer (Array): match-specific transfers
+            utility_X (Array): match-specific utilities for agents of type X
+            sigma_X (Array): scale parameter for EV type-I shock for agents of type X
+
+        Returns:
+
+            payoff_X (Array): match-specific payoffs for agents of type X
+        """
+        return jax.lax.add(utility_X, transfer) / sigma_X
+    
+    def Payoff_Y(self, transfer: Array, utility_Y: Array, sigma_Y: Array) -> Array:
+        """Computes match-specific payoffs for agents of type Y
+
+        Args:
+            transfer (Array): match-specific transfers
+            utility_Y (Array): match-specific utilities for agents of type Y
+            sigma_Y (Array): scale parameter for EV type-I shock for agents of type Y
+
+        Returns:
+            payoff_Y (Array): match-specific payoffs for agents of type Y
+        """
+        return jax.lax.sub(utility_Y, transfer) / sigma_Y
+
     def ChoiceProbabilities_X(
         self, transfer: Array, utility_X: Array, sigma_X: Array
     ) -> Array:
@@ -124,7 +151,7 @@ class MatchingModel(Pytree, mutable=False):
         Returns:
             ChoiceProbabilities (Array): match-specific choice probabilities for agents of type X
         """
-        v_X = jax.lax.add(utility_X, transfer) / sigma_X
+        v_X = self.Payoff_X(transfer, utility_X, sigma_X)
         return self.ChoiceProbabilities(v_X, axis=1)
 
     def ChoiceProbabilities_Y(
@@ -139,7 +166,7 @@ class MatchingModel(Pytree, mutable=False):
         Returns:
             ChoiceProbabilities (Array): match-specific choice probabilities for agents of type Y
         """
-        v_Y = jax.lax.sub(utility_Y, transfer) / sigma_Y
+        v_Y = self.Payoff_Y(transfer, utility_Y, sigma_Y)
         return self.ChoiceProbabilities(v_Y, axis=0)
 
     def Demand_X(self, transfer: Array, utility_X: Array, sigma_X) -> Array:
@@ -404,6 +431,24 @@ class MatchingModel(Pytree, mutable=False):
             model_transfer = transfer
 
         return self.moments_of_measurement_error(model_transfer, data.transfers)
+    
+    def R_squared(self, params: Array, data: Data) -> Array:
+        """Computes the R-squared of the measurement errors
+
+        Args:
+            params (Array): parameters of agents' utility functions
+            data (Data): observed data
+
+        Returns:
+        R_squared (Array):
+            R-squared of measurement error
+        """
+        mp = self.extract_model_parameters(params)
+        utility_X, utility_Y = self.Utilities_of_agents(mp)
+
+        transfer = self.solve(utility_X, utility_Y, mp) + mp.transfer_constant
+
+        return 1 - jnp.var(data.transfers - transfer) / jnp.var(data.transfers)
 
     def neg_log_likelihood(self, params: Array, data: Data) -> Array:
         """Computes the negative log-likelihood function
@@ -468,26 +513,26 @@ class MatchingModel(Pytree, mutable=False):
             jnp.sum(self.marginal_distribution_X), jnp.sum(self.marginal_distribution_Y)
         )
 
-        result = minimize(
-            lambda x: self.neg_log_likelihood(x, data),
-            guess,
-            method="BFGS",
-            tol=tol,
-            options={"maxiter": maxiter},
-        )
-        print(
-            f"\niterations: {result.nit}, success: {result.success}, status: {result.status}, final gradient norm: {jnp.linalg.norm(result.jac)}"
-        )
-        print(f"\nGradients:\n {result.jac}\n")
-        return result.x
-
-        # result = BFGS(
-        #     fun=self.neg_log_likelihood,
+        # result = minimize(
+        #     lambda x: self.neg_log_likelihood(x, data),
+        #     guess,
+        #     method="BFGS",
         #     tol=tol,
-        #     maxiter=maxiter,
-        #     verbose=verbose,
-        #     jit=False,
-        # ).run(guess, data)
-        # print(f"\niterations: {result.state.iter_num}, final gradient norm: {jnp.linalg.norm(result.state.grad)}")
-        # print(f"\nGradients:\n {result.state.grad}\n")
-        # return result.params
+        #     options={"maxiter": maxiter},
+        # )
+        # print(
+        #     f"\niterations: {result.nit}, success: {result.success}, status: {result.status}, final gradient norm: {jnp.linalg.norm(result.jac)}"
+        # )
+        # print(f"\nGradients:\n {result.jac}\n")
+        # return result.x
+
+        result = BFGS(
+            fun=self.neg_log_likelihood,
+            tol=tol,
+            maxiter=maxiter,
+            verbose=verbose,
+            jit=False,
+        ).run(guess, data)
+        print(f"\niterations: {result.state.iter_num}, final gradient norm: {jnp.linalg.norm(result.state.grad)}")
+        print(f"\nGradients:\n {result.state.grad}\n")
+        return result.params
