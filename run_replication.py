@@ -154,11 +154,14 @@ covariates = jnp.concatenate([covariates_Y, covariates_X], axis=1)
 model = MatchingModel(
     covariates_X=covariates_X[None, :, :],
     covariates_Y=covariates_Y[:, None, :],
+
     marginal_distribution_X=jnp.ones((1, covariates_X.shape[0]))
     / covariates_X.shape[0],
     marginal_distribution_Y=jnp.ones((covariates_Y.shape[0], 1))
     / covariates_Y.shape[0],
+
     continuous_distributed_attributes=True,
+
     include_transfer_constant=include_transfer_constant,
     include_scale_parameters=include_scale_parameters,
 )
@@ -194,12 +197,13 @@ if model.include_transfer_constant is True:
     guess = jnp.concatenate([guess, jnp.array([0.0])], axis=0)
 
 if model.include_scale_parameters is True:
-    guess = jnp.concatenate([guess, jnp.array([0.0, 0.0])], axis=0)
+    # guess = jnp.concatenate([guess, jnp.log(jnp.array([1.0, 1.0]))], axis=0)
+    guess = jnp.concatenate([guess, jnp.array([1.0, 1.0])], axis=0)
 
 neg_log_lik = model.neg_log_likelihood(guess, data)
 print(f"{neg_log_lik = }")
 
-estimates_transformed = model.fit(guess, data, maxiter=1, verbose=True)
+estimates_transformed = model.fit(guess, data, maxiter=1000, verbose=True)
 mp = model.extract_model_parameters(estimates_transformed, transform=True)
 estimates = model.class2vec(mp, transform=False)
 

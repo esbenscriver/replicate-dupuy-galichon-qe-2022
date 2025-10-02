@@ -8,12 +8,13 @@ Esben Scriver Andersen, Note on solving one-to-one matching models with linear t
 import jax
 import jax.numpy as jnp
 from jax import Array
+from jax.scipy.optimize import minimize, OptimizeResults
 
 # import simple_pytree (used to store variables)
 from simple_pytree import Pytree, dataclass
 
 # import solvers
-from jaxopt import FixedPointIteration, AndersonAcceleration, LBFGS
+from jaxopt import FixedPointIteration, AndersonAcceleration, LBFGS, BFGS
 from squarem_jaxopt import SquaremAcceleration
 
 SolverTypes = (
@@ -263,17 +264,23 @@ class MatchingModel(Pytree, mutable=False):
         else:
             transfer_constant = jnp.asarray([0.0])
 
-        if self.include_scale_parameters is True and transform is True:
-            sigma_X = jnp.exp(jnp.asarray([params[-2]]))
-            sigma_Y = jnp.exp(jnp.asarray([params[-1]]))
-        elif self.include_scale_parameters is True and transform is False:
-            sigma_X = jnp.asarray(params[-2])
-            sigma_Y = jnp.asarray(params[-1])
-        elif self.include_scale_parameters is False:
-            sigma_X = jnp.asarray([1.0])
-            sigma_Y = jnp.asarray([1.0])
-        else:
-            raise ValueError("include_scale_parameters must be True or False")
+        # sigma_X = jnp.exp(jnp.asarray([params[-2]]))
+        # sigma_Y = jnp.exp(jnp.asarray([params[-1]]))
+
+        sigma_X = jnp.asarray([params[-2]])
+        sigma_Y = jnp.asarray([params[-1]])
+
+        # if self.include_scale_parameters is True and transform is True:
+        #     sigma_X = jnp.exp(jnp.asarray([params[-2]]))
+        #     sigma_Y = jnp.exp(jnp.asarray([params[-1]]))
+        # elif self.include_scale_parameters is True and transform is False:
+        #     sigma_X = jnp.asarray(params[-2])
+        #     sigma_Y = jnp.asarray(params[-1])
+        # elif self.include_scale_parameters is False:
+        #     sigma_X = jnp.asarray([1.0])
+        #     sigma_Y = jnp.asarray([1.0])
+        # else:
+        #     raise ValueError(f"include_scale_parameters must be True or False: {self.include_scale_parameters = }")
 
         return ModelParameters(
             beta_X=beta_X,
@@ -296,23 +303,37 @@ class MatchingModel(Pytree, mutable=False):
         params = jnp.concatenate([mp.beta_X, mp.beta_Y], axis=0)
         if self.include_transfer_constant is True:
             params = jnp.concatenate([params, mp.transfer_constant], axis=0)
-        if self.include_scale_parameters is True and transform is True:
-            params = jnp.concatenate(
-                [
-                    params,
-                    jnp.concatenate([jnp.log(mp.sigma_X), jnp.log(mp.sigma_Y)], axis=0),
-                ],
-                axis=0,
-            )
-        elif self.include_scale_parameters is True and transform is False:
-            params = jnp.concatenate(
-                [params, jnp.concatenate([mp.sigma_X, mp.sigma_Y], axis=0)],
-                axis=0,
-            )
-        elif self.include_scale_parameters is False:
-            params = params
-        else:
-            raise ValueError("include_scale_parameters must be True or False")
+
+        # params = jnp.concatenate(
+        #     [
+        #         params,
+        #         jnp.concatenate([jnp.log(mp.sigma_X), jnp.log(mp.sigma_Y)], axis=0),
+        #     ],
+        #     axis=0,
+        # )
+
+        params = jnp.concatenate(
+            [params, jnp.concatenate([mp.sigma_X, mp.sigma_Y], axis=0)],
+            axis=0,
+        )
+
+        # if self.include_scale_parameters is True and transform is True:
+        #     params = jnp.concatenate(
+        #         [
+        #             params,
+        #             jnp.concatenate([jnp.log(mp.sigma_X), jnp.log(mp.sigma_Y)], axis=0),
+        #         ],
+        #         axis=0,
+        #     )
+        # elif self.include_scale_parameters is True and transform is False:
+        #     params = jnp.concatenate(
+        #         [params, jnp.concatenate([mp.sigma_X, mp.sigma_Y], axis=0)],
+        #         axis=0,
+        #     )
+        # elif self.include_scale_parameters is False:
+        #     params = params
+        # else:
+        #     raise ValueError("include_scale_parameters must be True or False")
         return params
 
     def Utilities_of_agents(self, mp: ModelParameters) -> tuple[Array, Array]:
@@ -438,12 +459,22 @@ class MatchingModel(Pytree, mutable=False):
         Returns:
             params (Array): parameter estimates
         """
+        assert jnp.isclose(jnp.sum(self.marginal_distribution_X), jnp.sum(self.marginal_distribution_Y))
+        result = minimize(
+            lambda x: self.neg_log_likelihood(x, data), 
+            guess,
+            method='BFGS',
+            tol=tol, 
+            options=None,
+        )
+        print(f"{result = }")
+        return result.x
 
-        result = LBFGS(
-            fun=self.neg_log_likelihood,
-            tol=tol,
-            maxiter=maxiter,
-            verbose=verbose,
-            jit=False,
-        ).run(guess, data)
-        return result.params
+        # result = BFGS(
+        #     fun=self.neg_log_likelihood,
+        #     tol=tol,
+        #     maxiter=maxiter,
+        #     verbose=verbose,
+        #     jit=False,
+        # ).run(guess, data)
+        # return result.params
