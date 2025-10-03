@@ -123,7 +123,7 @@ df["x_exp_sq"] = df["x_exp"].to_numpy() ** 2
 if import_matlab_file is True:
     covariates_X = jnp.nan_to_num(loadmat("Repl_QE/Data/BF_A.mat")["BF_A_tilda"], nan=0.0)
     covariates_Y = jnp.nan_to_num(loadmat("Repl_QE/Data/BF_G.mat")["BF_G_tilda"], nan=0.0)
-    observed_wage = jnp.nan_to_num(loadmat("Repl_QE/Data/wage.mat")["w"], nan=0.0)
+    observed_wage = jnp.nan_to_num(loadmat("Repl_QE/Data/wage.mat")["w"], nan=0.0).squeeze()
 
     # Or specify a custom order
     new_order_X =  [1, 2, 0]
@@ -235,6 +235,8 @@ if model.include_transfer_constant is True:
 if model.include_scale_parameters is True:
     guess = jnp.concatenate([guess, jnp.array([1.0, 1.0])], axis=0)
 
+# guess = jnp.asarray(dupuy_galichon_estimates)
+
 print(f"\nlogL(guess)={-model.neg_log_likelihood(guess, data)}")
 
 estimates_transformed = model.fit(guess, data, maxiter=500, verbose=True)
@@ -245,9 +247,6 @@ print(f"\nlogL(estimates)={-model.neg_log_likelihood(estimates, data)}")
 
 if include_transfer_constant is True and include_scale_parameters is True:
     dupuy_galichon_estimates = jnp.asarray(dupuy_galichon_estimates)
-    print(
-        f"\nlogL(dupuy_galichon_estimates)={-model.neg_log_likelihood(dupuy_galichon_estimates, data)}"
-    )
     df_estimates = pd.DataFrame(
         {
             "name": parameter_names,
@@ -265,6 +264,20 @@ if include_transfer_constant is True and include_scale_parameters is True:
             "Andersen (2025)": jnp.asarray([mean, variance]),
         }
     ).round(3).set_index("name").rename_axis(None)
+
+    logL_DG = -model.neg_log_likelihood(dupuy_galichon_estimates, data)
+    logL = -model.neg_log_likelihood(estimates, data)
+
+    R2_DG = model.R_squared(dupuy_galichon_estimates, data)
+    R2 = model.R_squared(estimates, data)
+
+    df_objectives = pd.DataFrame(
+        {
+            "": ["Log-likelihood", "R-squared"],
+            "Dupuy and Galichon (2022)": [logL_DG, R2_DG],
+            "Andersen (2025)": [logL, R2],
+        }
+    ).round(3).set_index("").rename_axis(None)
 else:
     df_estimates = pd.DataFrame(
         {
@@ -281,13 +294,22 @@ else:
         }
     ).round(3).set_index("name").rename_axis(None)
 
+    logL = -model.neg_log_likelihood(estimates, data)
+    R2 = model.R_squared(estimates, data)
+
+    df_objectives = pd.DataFrame(
+        {
+            "": ["Log-likelihood", "R-squared"],
+            "fit": [logL, R2],
+        }
+    ).round(3).set_index("").rename_axis(None)
+
 print("\n" + "=" * 80)
 print("Parameter Estimates")
 print("=" * 80)
 print(df_estimates)
 print("=" * 80)
 print(f"Number of estimated parameters: {len(df_estimates)}\n")
-model.R_squared(estimates, data)
 
 print("=" * 80)
 print("Estimated Moments of Measurement Errors")
@@ -298,6 +320,7 @@ print("=" * 80)
 if include_transfer_constant is True and include_scale_parameters is True and import_matlab_file is True:
     df_estimates.to_markdown("output/estimated_parameters.md", floatfmt=".3f")
     df_moments.to_markdown("output/estimated_moments.md", floatfmt=".3f")
+    df_objectives.to_markdown("output/objective.md", floatfmt=".3f")
 else:
     df_estimates.to_markdown(
         f"output/estimated_parameters_constant_{include_transfer_constant}_scale_{include_scale_parameters}_MatLab_{import_matlab_file}.md",
@@ -305,5 +328,9 @@ else:
     )
     df_moments.to_markdown(
         f"output/estimated_moments_constant_{include_transfer_constant}_scale_{include_scale_parameters}_MatLab_{import_matlab_file}.md",
+        floatfmt=".3f",
+    )
+    df_objectives.to_markdown(
+        f"output/objective_constant_{include_transfer_constant}_scale_{include_scale_parameters}_MatLab_{import_matlab_file}.md",
         floatfmt=".3f",
     )

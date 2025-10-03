@@ -447,7 +447,7 @@ class MatchingModel(Pytree, mutable=False):
 
         log_lik_transfers= -jnp.log(variance_of_error) * (data.transfers.size / 2)
         log_lik_matches = jnp.sum(data.matches * (jnp.log(pX) + jnp.log(pY)))
-
+        
         neg_log_lik = -(log_lik_transfers + log_lik_matches) / number_of_observations
 
         return neg_log_lik

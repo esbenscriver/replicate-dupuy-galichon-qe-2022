@@ -21,28 +21,53 @@ Below, we have succesfully replicated Table 1 of Dupuy and Galichon (2022) that 
 | Public              |   0.12 |  0.33 |  0.00 |   1.00 |
 
 ## Replication of maximum likelihood estimates
-The table below compares our estimates to Dupuy and Galichon (2022).
+The table below compares our estimates to Dupuy and Galichon (2022) and the implied log-likelihood functions given the reported estimates.
 
 |                               |   Dupuy and Galichon (2022) |   Andersen (2025) |
 |:------------------------------|----------------------------:|------------------:|
-| Years of schooling            |                       0.057 |            -0.037 |
-| Years of experience           |                       0.084 |             0.457 |
-| Female                        |                      -0.404 |             0.986 |
-| Married                       |                       0.050 |             0.118 |
-| White                         |                       0.046 |             0.048 |
-| Black                         |                      -0.108 |            -0.228 |
-| Asian                         |                      -0.069 |             0.040 |
-| Years of experience (squared) |                      -0.051 |             0.272 |
-| Risk x Years of schooling     |                      -0.059 |             0.125 |
-| Public x Years of schooling   |                       0.074 |             0.594 |
-| Risk x Years of experience    |                      -2.388 |            -0.062 |
-| Public x Years of experience  |                       0.838 |             0.015 |
-| Risk x Females                |                       0.096 |             1.014 |
-| Public x Females              |                       0.548 |             0.007 |
-| Risk                          |                      -0.023 |            -0.003 |
-| Public                        |                      -0.062 |             0.113 |
-| Public x Years of schooling   |                       0.081 |             0.780 |
-| Salary constant               |                       2.981 |             2.653 |
-| Scale parameter (workers)     |                       0.046 |             1.000 |
-| Scale parameter (firms)       |                       2.233 |             1.000 |
+| Risk                          |                      -0.023 |            -0.023 |
+| Public                        |                      -0.062 |            -0.061 |
+| Public x Years of schooling   |                       0.081 |             0.079 |
+| Years of schooling            |                       0.057 |             0.061 |
+| Years of experience           |                       0.084 |             0.068 |
+| Female                        |                      -0.404 |            -0.353 |
+| Married                       |                       0.050 |             0.053 |
+| White                         |                       0.046 |             0.047 |
+| Black                         |                      -0.108 |            -0.105 |
+| Asian                         |                      -0.069 |             0.070 |
+| Years of experience (squared) |                      -0.051 |            -0.051 |
+| Risk x Years of schooling     |                      -0.059 |            -0.068 |
+| Risk x Years of experience    |                       0.074 |             0.072 |
+| Risk x Females                |                      -2.388 |            -2.122 |
+| Public x Years of schooling   |                       0.838 |             0.807 |
+| Public x Years of experience  |                       0.096 |             0.232 |
+| Public x Females              |                       0.548 |             0.298 |
+| Salary constant               |                       2.981 |             2.611 |
+| Scale parameter (workers)     |                       0.046 |             0.047 |
+| Scale parameter (firms)       |                       2.233 |             1.993 |
+|:------------------------------|----------------------------:|------------------:|
+| Log-likelihood                |                      -5.191 |            -5.076 |
+
+The table below reports the implied mean and variance of the wage measurement errors given the parameter estimates.
+
+|          |   Dupuy and Galichon (2022) |   Andersen (2025) |
+|:---------|----------------------------:|------------------:|
+| mean     |                      -0.369 |            -0.000 |
+| variance |                       0.276 |             0.140 |
+
+Notice, that if the estimated parameters maximize the likelihood function, including a salary constant effectively imposes that the mean of the measurement errors is zero.
+
+Thus, including a salary constant is equivalent to allowing the measurement errors to have a non-zero mean.
+Consequently, the salary constant can be concentrated out of the likelihood function in the same way as the variance of the measurement error,
+$
+    \hat{\varepsilon}_{i}(\Theta) = \tilde{w}_{i} - w_{i}(\Theta), 
+$
+$
+    \hat{\mu}(\Theta) = \tfrac{1}{N} \sum_{i=1}^N \hat{\varepsilon}_{i}(\Theta),
+$
+$
+    \hat{\sigma}^2(\Theta) = \tfrac{1}{N} \sum_{i=1}^N \left(\hat{\varepsilon}_{i}(\Theta) - \hat{\mu}(\Theta)\right)^2.
+$
+
+In turn, we have one less parameter to optimize the log-likelihood function with respect to.
 
