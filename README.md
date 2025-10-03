@@ -21,7 +21,7 @@ Below, we have succesfully replicated Table 1 of Dupuy and Galichon (2022) that 
 | Public              |   0.12 |  0.33 |  0.00 |   1.00 |
 
 ## Replication of maximum likelihood estimates
-The table below compares our estimates to Dupuy and Galichon (2022) and the implied log-likelihood functions given the reported estimates.
+The table below compares our estimates to Dupuy and Galichon (2022).
 
 |                               |   Dupuy and Galichon (2022) |   Andersen (2025) |
 |:------------------------------|----------------------------:|------------------:|
@@ -45,8 +45,6 @@ The table below compares our estimates to Dupuy and Galichon (2022) and the impl
 | Salary constant               |                       2.981 |             2.611 |
 | Scale parameter (workers)     |                       0.046 |             0.047 |
 | Scale parameter (firms)       |                       2.233 |             1.993 |
-|:------------------------------|----------------------------:|------------------:|
-| Log-likelihood                |                      -5.191 |            -5.076 |
 
 The table below reports the implied mean and variance of the wage measurement errors given the parameter estimates.
 
@@ -59,15 +57,14 @@ Notice, that if the estimated parameters maximize the likelihood function, inclu
 
 Thus, including a salary constant is equivalent to allowing the measurement errors to have a non-zero mean.
 Consequently, the salary constant can be concentrated out of the likelihood function in the same way as the variance of the measurement error,
-$
+$$
     \hat{\varepsilon}_{i}(\Theta) = \tilde{w}_{i} - w_{i}(\Theta), 
-$
-$
+$$
+$$
     \hat{\mu}(\Theta) = \tfrac{1}{N} \sum_{i=1}^N \hat{\varepsilon}_{i}(\Theta),
-$
-$
+$$
     \hat{\sigma}^2(\Theta) = \tfrac{1}{N} \sum_{i=1}^N \left(\hat{\varepsilon}_{i}(\Theta) - \hat{\mu}(\Theta)\right)^2.
-$
+$$
 
 In turn, we have one less parameter to optimize the log-likelihood function with respect to.
 
