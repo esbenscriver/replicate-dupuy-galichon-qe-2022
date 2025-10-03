@@ -57,6 +57,7 @@ Notice, that if the estimated parameters maximize the likelihood function, inclu
 
 Thus, including a salary constant is equivalent to allowing the measurement errors to have a non-zero mean.
 Consequently, the salary constant can be concentrated out of the likelihood function in the same way as the variance of the measurement error,
+
 $$
     \hat{\varepsilon}_{i}(\Theta) = \tilde{w}_{i} - w_{i}(\Theta), 
 $$
