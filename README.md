@@ -59,10 +59,11 @@ Thus, including a salary constant is equivalent to allowing the measurement erro
 Consequently, the salary constant can be concentrated out of the likelihood function in the same way as the variance of the measurement error,
 
 $$
-    \hat{\varepsilon}_{i}(\Theta) = \tilde{w}_{i} - w_{i}(\Theta), 
+    \hat{\varepsilon}_{i}(\Theta) = w_{i} - \hat{w}_{i}(\Theta), 
 $$
 $$
     \hat{\mu}(\Theta) = \tfrac{1}{N} \sum_{i=1}^N \hat{\varepsilon}_{i}(\Theta),
+$$
 $$
     \hat{\sigma}^2(\Theta) = \tfrac{1}{N} \sum_{i=1}^N \left(\hat{\varepsilon}_{i}(\Theta) - \hat{\mu}(\Theta)\right)^2.
 $$
