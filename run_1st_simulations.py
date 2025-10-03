@@ -87,13 +87,12 @@ mp_true = ModelParameters(
     sigma_Y=sigma_Y,
     transfer_constant=transfer_constant,
 )
-parameter_values = model.class2vec(mp_true, transform=False)
-parameter_values_transformed = model.class2vec(mp_true, transform=True)
+parameter_values = model.class2vec(mp_true)
 
 # Solve model given true parameters
 utility_X, utility_Y = model.Utilities_of_agents(mp_true)
 transfer = model.solve(
-    utility_X=utility_X, utility_Y=utility_Y, mp=mp_true, verbose=False
+    utility_X=utility_X, utility_Y=utility_Y, mp=mp_true, verbose=True
 )
 
 # Simulate observed data
@@ -117,11 +116,10 @@ if model.include_scale_parameters is True:
 
 print(f"\n{model.neg_log_likelihood(guess, data) = }\n")
 
-estimates_transformed = model.fit(guess, data, maxiter=100, verbose=True)
-variance, mean = model.compute_moments(estimates_transformed, data)
+estimates = model.fit(guess, data, maxiter=100, verbose=True)
+variance, mean = model.compute_moments(estimates, data)
 
-mp_estim = model.extract_model_parameters(estimates_transformed, transform=True)
-estimates = model.class2vec(mp_estim, transform=False)
+mp_estim = model.extract_model_parameters(estimates)
 
 print("=" * 80)
 print("Parameter Estimates")
@@ -140,11 +138,11 @@ df_estimates = (
 )
 print(df_estimates)
 print("=" * 80)
-print(f"Number of estimated parameters: {len(estimates_transformed)}")
+print(f"Number of estimated parameters: {len(estimates)}")
 print(f"number of observations: {observed_treansfer.size}\n")
 
-print(f"{model.neg_log_likelihood(parameter_values_transformed, data) = }")
-print(f"{model.neg_log_likelihood(estimates_transformed, data) = }\n")
+print(f"{model.neg_log_likelihood(parameter_values, data) = }")
+print(f"{model.neg_log_likelihood(estimates, data) = }\n")
 
 print("=" * 80)
 print("Estimated Moments of Measurement Errors")
@@ -163,3 +161,4 @@ df_moments = (
 )
 print(df_moments)
 print("=" * 80)
+model.R_squared(estimates, data)

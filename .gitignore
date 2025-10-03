@@ -12,6 +12,7 @@ wheels/
 
 # Files in the Repl_QE folders
 *.m
+*.mat
 *.docx
 *.pdf
 *.csv

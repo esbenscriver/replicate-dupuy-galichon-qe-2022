@@ -30,6 +30,9 @@ variable_names = {
 }
 
 covariate_names = [
+    "Risk",
+    "Public",
+    "Public x Years of schooling",
     "Years of schooling",
     "Years of experience",
     "Female",
@@ -39,17 +42,17 @@ covariate_names = [
     "Asian",
     "Years of experience (squared)",
     "Risk x Years of schooling",
-    "Public x Years of schooling",
     "Risk x Years of experience",
-    "Public x Years of experience",
     "Risk x Females",
-    "Public x Females",
-    "Risk",
-    "Public",
     "Public x Years of schooling",
+    "Public x Years of experience",
+    "Public x Females",
 ]
 
 dupuy_galichon_estimates = [
+    -0.023,
+    -0.062,
+    0.081,
     0.057,
     0.084,
     -0.404,
@@ -64,9 +67,6 @@ dupuy_galichon_estimates = [
     0.838,
     0.096,
     0.548,
-    -0.023,
-    -0.062,
-    0.081,
     2.981,
     0.046,
     2.233,

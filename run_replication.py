@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 import xml.etree.ElementTree as ET
+from scipy.io import loadmat
 
 from matching import MatchingModel, Data
 from dupuy_galichon_2022 import (
@@ -19,7 +20,14 @@ jax.config.update("jax_enable_x64", True)
 
 include_transfer_constant = True
 include_scale_parameters = True
-
+import_matlab_file = False
+print("\n" + "=" * 80)
+print("Replication Settings")
+print("=" * 80)
+print(f"Include transfer constant: {include_transfer_constant}")
+print(f"Include scale parameters: {include_scale_parameters}")  
+print(f"Import covariates and wages from Matlab .mat files: {import_matlab_file}")
+print("=" * 80+"\n")
 
 def normalize_variables(variables):
     return (variables - np.mean(variables, axis=0, keepdims=True)) / np.std(
@@ -63,7 +71,6 @@ def read_excel_xml(file_path):
 # Read the XML file
 file_path = "Repl_QE/Data/workingdataset_occind.xml"
 df = read_excel_xml(file_path)
-# print(df.head(10))
 
 # Convert numeric columns to proper data types
 numeric_columns = [
@@ -113,49 +120,97 @@ df[none_dummy_columns] = normalize_variables(array_none_dummy)
 
 df["x_exp_sq"] = df["x_exp"].to_numpy() ** 2
 
-X_columns = [
-    "x_yrseduc",
-    "x_exp",
-    "x_sex",
-    "x_married",
-    "x_white",
-    "x_black",
-    "x_asian",
-    "x_exp_sq",
-]
-Y_columns = ["y_risk_rateh_occind_ave", "y_public"]
-y_public_index = 1
-x_yrseduc_index = 0
+if import_matlab_file is True:
+    covariates_X = jnp.nan_to_num(loadmat("Repl_QE/Data/BF_A.mat")["BF_A_tilda"], nan=0.0)
+    covariates_Y = jnp.nan_to_num(loadmat("Repl_QE/Data/BF_G.mat")["BF_G_tilda"], nan=0.0)
+    observed_wage = jnp.nan_to_num(loadmat("Repl_QE/Data/wage.mat")["w"], nan=0.0)
 
-observed_wage = jnp.log(jnp.asarray(df["wage"].to_numpy()))
+    # Or specify a custom order
+    new_order_X =  [1, 2, 0]
+    covariates_X = covariates_X[:, :, new_order_X]
+    new_order_Y = [6, 7, 8, 9, 10, 11, 12, 13, 0, 1, 2, 3, 4, 5]
+    covariates_Y = covariates_Y[:, :, new_order_Y]
+else:
+    X_columns = [
+        "x_yrseduc",
+        "x_exp",
+        "x_sex",
+        "x_married",
+        "x_white",
+        "x_black",
+        "x_asian",
+        "x_exp_sq",
+    ]
+    Y_columns = ["y_risk_rateh_occind_ave", "y_public"]
+    y_public_index = 1
+    x_yrseduc_index = 0
 
-X_vars = jnp.asarray(df[X_columns].to_numpy())
-Y_vars = jnp.asarray(df[Y_columns].to_numpy())
+    observed_wage = jnp.log(jnp.asarray(df["wage"].to_numpy()))
 
-number_of_Xvars, number_of_Yvars = 3, 2
-X_vars_interacted = jnp.zeros((X_vars.shape[0], number_of_Xvars * number_of_Yvars))
+    X_vars = jnp.asarray(df[X_columns].to_numpy())[:,None,:]
+    Y_vars = jnp.asarray(df[Y_columns].to_numpy())[None,:,:]
 
-for x in range(number_of_Xvars):
-    for y in range(number_of_Yvars):
-        X_vars_interacted = X_vars_interacted.at[:, x * number_of_Yvars + y].set(
-            X_vars[:, x] * Y_vars[:, y]
-        )
+    X_columns_to_interact = ["x_yrseduc", "x_exp", "x_sex"]
+    Y_columns_to_interact = ["y_risk_rateh_occind_ave", "y_public"]
 
-covariates_Y = jnp.concatenate([X_vars, X_vars_interacted], axis=1)
-covariates_X = jnp.concatenate(
-    [
-        Y_vars,
-        X_vars[:, [x_yrseduc_index]] * Y_vars[:, [y_public_index]],
-    ],
-    axis=1,
-)
-print(f"{covariates_X.shape=}, {covariates_Y.shape=}")
+    N = X_vars.shape[0]
 
-covariates = jnp.concatenate([covariates_Y, covariates_X], axis=1)
+    X_vars_interacted = jnp.zeros((N, N, 0))
+    for y_col in Y_columns_to_interact:
+        y_var = df[y_col].to_numpy()[None,:]
+        for x_col in X_columns_to_interact:
+            x_var = df[x_col].to_numpy()[:,None]
+
+            X_vars_interacted = jnp.append(
+                X_vars_interacted, 
+                (x_var * y_var)[:,:,None], 
+                axis=-1
+            )
+
+    x_axis, y_axis = 0, 1
+
+    covariates_Y = jnp.concatenate(
+        [
+            jnp.repeat(X_vars, repeats=N, axis=y_axis), 
+            X_vars_interacted
+        ], 
+        axis=-1,
+    )
+    covariates_X = jnp.concatenate(
+        [
+            jnp.repeat(Y_vars, repeats=N, axis=x_axis),
+            X_vars[:, :, [x_yrseduc_index]] * Y_vars[:, :, [y_public_index]],
+        ],
+        axis=-1,
+    )
+
+covariates = jnp.concatenate([covariates_X, covariates_Y], axis=-1)
+print(f"{covariates_X.shape = }, {covariates_Y.shape = }")
+df_covariate_stats = pd.DataFrame(
+    {
+        "name": covariate_names,
+        "mean": jnp.mean(covariates, axis=(0, 1)),
+        "std": jnp.std(covariates, axis=(0, 1)),
+        "min": jnp.min(covariates, axis=(0, 1)),
+        "max": jnp.max(covariates, axis=(0, 1)),
+    }
+).round(4).set_index("name").rename_axis(None)
+
+if import_matlab_file is True:
+    df_covariate_stats.to_markdown("output/covariate_stats_matlab.md", floatfmt=".4f")
+else:
+    df_covariate_stats.to_markdown("output/covariate_stats.md", floatfmt=".4f")
+
+print("=" * 80)
+print("Covariate Statistics Table")
+print("=" * 80)
+print(df_covariate_stats)
+print("=" * 80)
+print(f"Number of covariates: {len(df_covariate_stats)}\n")
 
 model = MatchingModel(
-    covariates_X=covariates_X[None, :, :],
-    covariates_Y=covariates_Y[:, None, :],
+    covariates_X=covariates_X,
+    covariates_Y=covariates_Y,
     marginal_distribution_X=jnp.ones((1, covariates_X.shape[0]))
     / covariates_X.shape[0],
     marginal_distribution_Y=jnp.ones((covariates_Y.shape[0], 1))
@@ -172,39 +227,19 @@ if model.include_transfer_constant is True:
 if model.include_scale_parameters is True:
     parameter_names += ["Scale parameter (workers)", "Scale parameter (firms)"]
 
-df_covariate_stats = pd.DataFrame(
-    {
-        "name": covariate_names,
-        "mean": jnp.mean(covariates, axis=0),
-        "std": jnp.std(covariates, axis=0),
-        "min": jnp.min(covariates, axis=0),
-        "max": jnp.max(covariates, axis=0),
-    }
-).round(3).set_index("name").rename_axis(None)
-
-df_covariate_stats.to_markdown("output/covariate_stats.md", floatfmt=".3f")
-print("=" * 80)
-print("Covariate Statistics Table")
-print("=" * 80)
-print(df_covariate_stats)
-print("=" * 80)
-print(f"Number of covariates: {len(df_covariate_stats)}\n")
-
 data = Data(transfers=observed_wage, matches=jnp.ones_like(observed_wage, dtype=float))
 
-guess = jnp.ones(len(covariate_names))
+guess = jnp.zeros(len(covariate_names))
 if model.include_transfer_constant is True:
     guess = jnp.concatenate([guess, jnp.array([0.0])], axis=0)
-
 if model.include_scale_parameters is True:
-    # guess = jnp.concatenate([guess, jnp.log(jnp.array([1.0, 1.0]))], axis=0)
     guess = jnp.concatenate([guess, jnp.array([1.0, 1.0])], axis=0)
 
 print(f"\nlogL(guess)={-model.neg_log_likelihood(guess, data)}")
 
-estimates_transformed = model.fit(guess, data, maxiter=1000, verbose=True)
-mp = model.extract_model_parameters(estimates_transformed, transform=True)
-estimates = model.class2vec(mp, transform=False)
+estimates_transformed = model.fit(guess, data, maxiter=500, verbose=True)
+mp = model.extract_model_parameters(estimates_transformed)
+estimates = model.class2vec(mp)
 
 print(f"\nlogL(estimates)={-model.neg_log_likelihood(estimates, data)}")
 
@@ -220,11 +255,16 @@ if include_transfer_constant is True and include_scale_parameters is True:
             "Andersen (2025)": estimates,
         }
     ).round(3).set_index("name").rename_axis(None)
+    variance_DG, mean_DG = model.compute_moments(dupuy_galichon_estimates, data)
+    variance, mean = model.compute_moments(estimates, data)
 
-    print(
-        f"R^2 (Dupuy and Galichon (2022): {model.R_squared(dupuy_galichon_estimates, data)}"
-        + f", Andersen (2025): {model.R_squared(estimates, data)}\n"
-    )
+    df_moments = pd.DataFrame(
+        {
+            "name": ["mean", "variance"],
+            "Dupuy and Galichon (2022)": jnp.asarray([mean_DG, variance_DG]),
+            "Andersen (2025)": jnp.asarray([mean, variance]),
+        }
+    ).round(3).set_index("name").rename_axis(None)
 else:
     df_estimates = pd.DataFrame(
         {
@@ -232,36 +272,38 @@ else:
             "estimates": estimates,
         }
     ).round(3).set_index("name").rename_axis(None)
+    variance, mean = model.compute_moments(estimates, data)
+
+    df_moments = pd.DataFrame(
+        {
+            "name": ["mean", "variance"],
+            "estimates": jnp.asarray([mean, variance]),
+        }
+    ).round(3).set_index("name").rename_axis(None)
+
 print("\n" + "=" * 80)
 print("Parameter Estimates")
 print("=" * 80)
 print(df_estimates)
 print("=" * 80)
 print(f"Number of estimated parameters: {len(df_estimates)}\n")
+model.R_squared(estimates, data)
 
-variance, mean = model.compute_moments(estimates, data)
-
-df_moments = pd.DataFrame(
-    {
-        "name": ["mean", "variance"],
-        "estimates": jnp.asarray([mean, variance]),
-    }
-).round(3).set_index("name").rename_axis(None)
 print("=" * 80)
 print("Estimated Moments of Measurement Errors")
 print("=" * 80)
 print(df_moments)
 print("=" * 80)
 
-if include_transfer_constant is True and include_scale_parameters is True:
+if include_transfer_constant is True and include_scale_parameters is True and import_matlab_file is True:
     df_estimates.to_markdown("output/estimated_parameters.md", floatfmt=".3f")
     df_moments.to_markdown("output/estimated_moments.md", floatfmt=".3f")
 else:
     df_estimates.to_markdown(
-        f"output/estimated_parameters_constant_{include_transfer_constant}_scale_{include_scale_parameters}.md",
+        f"output/estimated_parameters_constant_{include_transfer_constant}_scale_{include_scale_parameters}_MatLab_{import_matlab_file}.md",
         floatfmt=".3f",
     )
     df_moments.to_markdown(
-        f"output/estimated_moments_constant_{include_transfer_constant}_scale_{include_scale_parameters}.md",
+        f"output/estimated_moments_constant_{include_transfer_constant}_scale_{include_scale_parameters}_MatLab_{import_matlab_file}.md",
         floatfmt=".3f",
     )

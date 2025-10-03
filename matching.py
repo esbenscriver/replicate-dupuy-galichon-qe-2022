@@ -11,7 +11,7 @@ from jax import Array
 from jax.scipy.optimize import minimize, OptimizeResults
 
 # import simple_pytree (used to store variables)
-from simple_pytree import Pytree, dataclass
+from simple_pytree import Pytree, dataclass, static_field
 
 # import solvers
 from jaxopt import FixedPointIteration, AndersonAcceleration, LBFGS, BFGS
@@ -74,9 +74,9 @@ class MatchingModel(Pytree, mutable=False):
     marginal_distribution_X: Array
     marginal_distribution_Y: Array
 
-    continuous_distributed_attributes: bool
-    include_transfer_constant: bool
-    include_scale_parameters: bool
+    continuous_distributed_attributes: bool = static_field(default=True)
+    include_transfer_constant: bool = static_field(default=True)
+    include_scale_parameters: bool = static_field(default=True)
 
     def ChoiceProbabilities(self, v: Array, axis: int) -> Array:
         """Compute the logit choice probabilities for inside and outside options
@@ -266,9 +266,7 @@ class MatchingModel(Pytree, mutable=False):
         # print(result.state)
         return result.params
 
-    def extract_model_parameters(
-        self, params: Array, transform: bool = True
-    ) -> ModelParameters:
+    def extract_model_parameters(self, params: Array) -> ModelParameters:
         """Extract and store model parameters
 
         Args:
@@ -286,32 +284,20 @@ class MatchingModel(Pytree, mutable=False):
             number_of_covariates_X : number_of_covariates_X + number_of_covariates_Y
         ]
 
-        if self.include_transfer_constant is True:
-            transfer_constant = jnp.asarray([params[-3]])
+        # Use static conditions since they're model attributes, not traced values
+        if self.include_transfer_constant and self.include_scale_parameters:
+            transfer_constant = params[-3:-2]
+        elif self.include_transfer_constant and not self.include_scale_parameters:
+            transfer_constant = params[-1:]
         else:
             transfer_constant = jnp.asarray([0.0])
 
-        # sigma_X = jnp.exp(jnp.asarray([params[-2]]))
-        # sigma_Y = jnp.exp(jnp.asarray([params[-1]]))
-
-        if self.include_scale_parameters is True:
-            sigma_X = jnp.asarray([params[-2]])
-            sigma_Y = jnp.asarray([params[-1]])
+        if self.include_scale_parameters:
+            sigma_X = params[-2:-1]
+            sigma_Y = params[-1:]
         else:
             sigma_X = jnp.asarray([1.0])
             sigma_Y = jnp.asarray([1.0])
-
-        # if self.include_scale_parameters is True and transform is True:
-        #     sigma_X = jnp.exp(jnp.asarray([params[-2]]))
-        #     sigma_Y = jnp.exp(jnp.asarray([params[-1]]))
-        # elif self.include_scale_parameters is True and transform is False:
-        #     sigma_X = jnp.asarray(params[-2])
-        #     sigma_Y = jnp.asarray(params[-1])
-        # elif self.include_scale_parameters is False:
-        #     sigma_X = jnp.asarray([1.0])
-        #     sigma_Y = jnp.asarray([1.0])
-        # else:
-        #     raise ValueError(f"include_scale_parameters must be True or False: {self.include_scale_parameters = }")
 
         return ModelParameters(
             beta_X=beta_X,
@@ -321,7 +307,7 @@ class MatchingModel(Pytree, mutable=False):
             sigma_Y=sigma_Y,
         )
 
-    def class2vec(self, mp: ModelParameters, transform: bool) -> Array:
+    def class2vec(self, mp: ModelParameters) -> Array:
         """Transform model parameters from ModelParameters class to vector
 
         Args:
@@ -332,40 +318,12 @@ class MatchingModel(Pytree, mutable=False):
             parameters of agents' utility functions
         """
         params = jnp.concatenate([mp.beta_X, mp.beta_Y], axis=0)
-        if self.include_transfer_constant is True:
+
+        if self.include_transfer_constant:
             params = jnp.concatenate([params, mp.transfer_constant], axis=0)
 
-        # params = jnp.concatenate(
-        #     [
-        #         params,
-        #         jnp.concatenate([jnp.log(mp.sigma_X), jnp.log(mp.sigma_Y)], axis=0),
-        #     ],
-        #     axis=0,
-        # )
-
-        if self.include_scale_parameters is True:
-            params = jnp.concatenate(
-                [params, jnp.concatenate([mp.sigma_X, mp.sigma_Y], axis=0)],
-                axis=0,
-            )
-
-        # if self.include_scale_parameters is True and transform is True:
-        #     params = jnp.concatenate(
-        #         [
-        #             params,
-        #             jnp.concatenate([jnp.log(mp.sigma_X), jnp.log(mp.sigma_Y)], axis=0),
-        #         ],
-        #         axis=0,
-        #     )
-        # elif self.include_scale_parameters is True and transform is False:
-        #     params = jnp.concatenate(
-        #         [params, jnp.concatenate([mp.sigma_X, mp.sigma_Y], axis=0)],
-        #         axis=0,
-        #     )
-        # elif self.include_scale_parameters is False:
-        #     params = params
-        # else:
-        #     raise ValueError("include_scale_parameters must be True or False")
+        if self.include_scale_parameters:
+            params = jnp.concatenate([params, mp.sigma_X, mp.sigma_Y], axis=0)
         return params
 
     def Utilities_of_agents(self, mp: ModelParameters) -> tuple[Array, Array]:
@@ -380,7 +338,6 @@ class MatchingModel(Pytree, mutable=False):
         utility_Y (Array):
             utilities for agents of type Y
         """
-
         utility_X = self.Utility(self.covariates_X, mp.beta_X)
         utility_Y = self.Utility(self.covariates_Y, mp.beta_Y)
         return utility_X, utility_Y
@@ -402,7 +359,7 @@ class MatchingModel(Pytree, mutable=False):
 
         mu = jnp.mean(error)
 
-        if self.include_transfer_constant is True:
+        if self.include_transfer_constant:
             return jnp.mean(error**2), mu
         else:
             return jnp.mean((error - mu) ** 2), mu
@@ -425,7 +382,7 @@ class MatchingModel(Pytree, mutable=False):
 
         transfer = self.solve(utility_X, utility_Y, mp) + mp.transfer_constant
 
-        if self.continuous_distributed_attributes is True:
+        if self.continuous_distributed_attributes:
             model_transfer = jnp.diag(transfer)
         else:
             model_transfer = transfer
@@ -448,8 +405,18 @@ class MatchingModel(Pytree, mutable=False):
 
         transfer = self.solve(utility_X, utility_Y, mp) + mp.transfer_constant
 
-        return 1 - jnp.var(data.transfers - transfer) / jnp.var(data.transfers)
+        SST = jnp.sum((data.transfers - jnp.mean(data.transfers))**2)
+        if self.continuous_distributed_attributes:
+            model_transfer = jnp.diag(transfer)
+        else:
+            model_transfer = transfer
 
+        SSR = jnp.sum((data.transfers - model_transfer)**2)
+        R_sq = 1 - SSR / SST
+        print(f"R^2: {R_sq}, SSR: {SSR}, SST: {SST}\n")
+
+        return R_sq
+    
     def neg_log_likelihood(self, params: Array, data: Data) -> Array:
         """Computes the negative log-likelihood function
 
@@ -465,7 +432,7 @@ class MatchingModel(Pytree, mutable=False):
 
         transfer = self.solve(utility_X, utility_Y, mp)
 
-        if self.continuous_distributed_attributes is True:
+        if self.continuous_distributed_attributes:
             model_transfer = jnp.diag(transfer) + mp.transfer_constant
             pX = jnp.diag(self.ChoiceProbabilities_X(transfer, utility_X, mp.sigma_X))
             pY = jnp.diag(self.ChoiceProbabilities_Y(transfer, utility_Y, mp.sigma_Y))
@@ -476,16 +443,12 @@ class MatchingModel(Pytree, mutable=False):
 
         number_of_observations = data.transfers.size + 2 * data.matches.sum()
 
-        log_lik_transfer = -jnp.log(
-            self.moments_of_measurement_error(model_transfer, data.transfers)[0]
-        ) * (data.transfers.size / 2)
-        log_lik_matched_X = jnp.sum(data.matches * jnp.log(pX))
-        log_lik_matched_Y = jnp.sum(data.matches * jnp.log(pY))
+        variance_of_error = self.moments_of_measurement_error(model_transfer, data.transfers)[0]
 
-        neg_log_lik = (
-            -(log_lik_transfer + log_lik_matched_X + log_lik_matched_Y)
-            / number_of_observations
-        )
+        log_lik_transfers= -jnp.log(variance_of_error) * (data.transfers.size / 2)
+        log_lik_matches = jnp.sum(data.matches * (jnp.log(pX) + jnp.log(pY)))
+
+        neg_log_lik = -(log_lik_transfers + log_lik_matches) / number_of_observations
 
         return neg_log_lik
 
@@ -513,26 +476,27 @@ class MatchingModel(Pytree, mutable=False):
             jnp.sum(self.marginal_distribution_X), jnp.sum(self.marginal_distribution_Y)
         )
 
-        # result = minimize(
-        #     lambda x: self.neg_log_likelihood(x, data),
-        #     guess,
-        #     method="BFGS",
-        #     tol=tol,
-        #     options={"maxiter": maxiter},
-        # )
-        # print(
-        #     f"\niterations: {result.nit}, success: {result.success}, status: {result.status}, final gradient norm: {jnp.linalg.norm(result.jac)}"
-        # )
-        # print(f"\nGradients:\n {result.jac}\n")
-        # return result.x
-
-        result = BFGS(
-            fun=self.neg_log_likelihood,
+        result = minimize(
+            lambda x: self.neg_log_likelihood(x, data),
+            guess,
+            method="BFGS",
             tol=tol,
-            maxiter=maxiter,
-            verbose=verbose,
-            jit=False,
-        ).run(guess, data)
-        print(f"\niterations: {result.state.iter_num}, final gradient norm: {jnp.linalg.norm(result.state.grad)}")
-        print(f"\nGradients:\n {result.state.grad}\n")
-        return result.params
+            options={"maxiter": maxiter},
+        )
+        print(
+            f"\niterations: {result.nit}, status: {result.status}, final gradient norm: {jnp.linalg.norm(result.jac)}"
+        )
+        print(f"\nGradients:\n {result.jac}\n")
+        return result.x
+
+        # result = BFGS(
+        #     fun=self.neg_log_likelihood,
+        #     tol=tol,
+        #     maxiter=maxiter,
+        #     verbose=verbose,
+        #     jit=False,
+        # ).run(guess, data)
+
+        # print(f"\niterations: {result.state.iter_num}, final gradient norm: {jnp.linalg.norm(result.state.grad)}")
+        # print(f"\nGradients:\n {result.state.grad}\n")
+        # return result.params
