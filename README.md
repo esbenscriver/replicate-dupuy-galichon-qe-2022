@@ -54,10 +54,10 @@ Our minimizer failed to converge and terminated after 82 iterations. From our es
 
 Recall that the measurment errors are assumed to be iid normal distributed, $N(\mu,s^2)$, with mean zero, $\mu=0$. The table below reports the implied mean and variance of the wage measurement errors given the parameter estimates.
 
-|          |   Dupuy and Galichon (2022) |   Andersen (2025) |
-|:---------|----------------------------:|------------------:|
-| mean     |                      -0.369 |             0.000 |
-| variance |                       0.276 |             0.140 |
+|                 |   Dupuy and Galichon (2022) |   Andersen (2025) |
+|:----------------|----------------------------:|------------------:|
+| mean, $\mu$     |                      -0.369 |             0.000 |
+| variance, $s^2$ |                       0.276 |             0.140 |
 
 Notice, that if the estimated parameters maximize the likelihood function, including a salary constant effectively imposes that the mean of the measurement errors is zero.
 
