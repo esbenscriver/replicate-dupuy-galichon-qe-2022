@@ -237,12 +237,16 @@ if model.include_scale_parameters is True:
 
 # guess = jnp.asarray(dupuy_galichon_estimates)
 
-print(f"\nlogL(guess)={-model.neg_log_likelihood(guess, data)}")
+I = 10
+estimates_matrix = jnp.zeros((len(guess), I))
+for i in range(I):
+    print(f"\ni={i+1}: logL(guess)={-model.neg_log_likelihood(guess, data)}")
+    par_est = model.fit(guess, data)
+    estimates_matrix = estimates_matrix.at[:,i].set(par_est)
+    guess = par_est
 
-estimates_transformed = model.fit(guess, data, maxiter=500, verbose=True)
-mp = model.extract_model_parameters(estimates_transformed)
-estimates = model.class2vec(mp)
-
+print(f"\nestimate:\n{estimates_matrix}")
+estimates = estimates_matrix[:,-1]
 print(f"\nlogL(estimates)={-model.neg_log_likelihood(estimates, data)}")
 
 if include_transfer_constant is True and include_scale_parameters is True:
@@ -334,3 +338,8 @@ else:
         f"output/objective_constant_{include_transfer_constant}_scale_{include_scale_parameters}_MatLab_{import_matlab_file}.md",
         floatfmt=".3f",
     )
+
+pd.DataFrame(estimates_matrix, columns=[f"iter_{i}" for i in range(I)]).round(4).to_markdown(
+    f"output/estimation_path_{include_transfer_constant}_scale_{include_scale_parameters}_MatLab_{import_matlab_file}.csv",
+    floatfmt=".4f",
+)
