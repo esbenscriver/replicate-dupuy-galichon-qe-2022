@@ -1,11 +1,11 @@
 
 # Description
-This project aims at replicating the empirical results of [Dupuy and Galichon (2022)](https://doi.org/10.3982/QE928) who estimates the value of job attributes and workers productivity from US data for 2017. Their estimate relies on maximum likelihood estimation of a one-to-one matching model with transferable utility, where the demand and supply of labor is given by the logit formula. This estimation procedure simultaneously fits both the matching patterns and the wage curve.
+This project aims at replicating the empirical results of [Dupuy and Galichon (2022)](https://doi.org/10.3982/QE928) who estimates the value of job amenities and labor productivity for the US for 2017. Their estimate relies on maximum likelihood estimation of a one-to-one matching model with transferable utility, where the demand and supply of labor is given by the logit formula. This estimation procedure simultaneously fits both the matching patterns and the wage curve.
 
 Dupuy and Galichon have made their Matlab code and dataset publicly available. However, we were unable to execute their code without making modifications. Therefore, we implemented their estimation procedure in Python, and our implementation is publicly available in this repository.
 
 ## Replication of descriptive statistics
-Below, we have succesfully replicated Table 1 of Dupuy and Galichon (2022) that show some descriptive statistics for the analyzed data set.
+The data set contains a cross section of 3,454 employed individuals for 2017. Below, we have succesfully replicated Table 1 of Dupuy and Galichon that show some descriptive statistics for the analyzed data set.
 
 |                     |   Mean |   Std |   Min |    Max |
 |:--------------------|-------:|------:|------:|-------:|
@@ -22,8 +22,12 @@ Below, we have succesfully replicated Table 1 of Dupuy and Galichon (2022) that 
 | Risk (per 100,000)  |   3.44 | 13.05 |  0.00 | 345.70 |
 | Public              |   0.12 |  0.33 |  0.00 |   1.00 |
 
+where risk measures the average number of fatal injuries per 100,000 by the occupation and industry the individual is employed.
+
 ## Replication of maximum likelihood estimates
-The table below compares our estimates to Dupuy and Galichon (2022). As shown we are not able to fully recover their estimates.
+For estimation, we apply the same transformations to the data as Dupuy and Galichon, who use the logarithm of hourly wages and standardize the variables years of schooling, years of experience, and risk.
+
+The table below compares our estimates to Dupuy and Galichon. As shown we are not able to fully recover their estimates.
 
 From the table we that our estimates for job attributes (row 1-3) closely aligned with their estimates. However, the estimated worker productivity terms (row 4-14) do not match their estimates. Our estimated salary constant and scale parameter of the firms tast-shocks also differ substantially from their estimates.
 
@@ -36,27 +40,27 @@ From the table we that our estimates for job attributes (row 1-3) closely aligne
 | Years of experience           |                       0.084 |             0.070 |
 | Female                        |                      -0.404 |            -0.368 |
 | Married                       |                       0.050 |             0.053 |
-| White                         |                       0.046 |             0.046 |
+| White                         |                       0.046 |             0.047 |
 | Black                         |                      -0.108 |            -0.106 |
 | Asian                         |                      -0.069 |             0.070 |
 | Years of experience (squared) |                      -0.051 |            -0.051 |
-| Risk x Years of schooling     |                      -0.059 |            -0.065 |
+| Risk x Years of schooling     |                      -0.059 |            -0.066 |
 | Risk x Years of experience    |                       0.074 |             0.072 |
-| Risk x Females                |                      -2.388 |            -2.137 |
+| Risk x Females                |                      -2.388 |            -2.136 |
 | Public x Years of schooling   |                       0.838 |             0.798 |
 | Public x Years of experience  |                       0.096 |             0.221 |
-| Public x Females              |                       0.548 |             0.402 |
-| Salary constant               |                       2.981 |             2.608 |
+| Public x Females              |                       0.548 |             0.403 |
+| Salary constant               |                       2.981 |             2.609 |
 | Scale parameter (workers)     |                       0.046 |             0.047 |
-| Scale parameter (firms)       |                       2.233 |             1.977 |
+| Scale parameter (firms)       |                       2.233 |             1.978 |
 
-During the maximization of the log-likelihood function, our optimizer terminated after 82 iterations as it failed to converge with a tolerance level of $1e-6$. However, our obtained average log-likelihood value of $-5.081$ is larger than the log-likelihood value of $-5.191$ implied by the estimates of Dupuy and Galichon (2022). It should be emphasized that in this exercise we rely on their rounded parameter estimates.
+During the maximization of the log-likelihood function, our optimizer terminated after 82 iterations as it failed to converge with a tolerance level of $1e-6$. However, our obtained average log-likelihood value of $-5.081$ is larger than the log-likelihood value of $-5.191$ implied by the estimates of Dupuy and Galichon. It should be emphasized that in this exercise we rely on their rounded parameter estimates.
 
-Recall that the measurment errors are assumed to be iid normal distributed, $N(m,s^2)$, with mean zero, $m=0$. The table below reports the implied mean and variance of the wage measurement errors given the parameter estimates.
+Recall that the measurment errors are assumed to be iid normal distributed, $N(m,s^2)$, with mean zero, $m=0$. The table below reports the implied mean and variance of the wage measurement errors given the parameter estimates. We estimate the variance of the measurement errors to $0.140$ and a conrresponding $R^2$ of $0.233$.
 
 |                 |   Dupuy and Galichon (2022) |   Andersen (2025) |
 |:----------------|----------------------------:|------------------:|
-| mean, $m$     |                      -0.369 |             0.000 |
+| mean, $m$       |                      -0.369 |             0.000 |
 | variance, $s^2$ |                       0.276 |             0.140 |
 
 Observe that, if the parameter vector $\hat{\Theta}$ maximizes the likelihood function, the inclusion of a salary constant implies that the mean of the measurement error is zero. Hence, including a salary constant is equivalent implies a zero mean for the measurement error. Consequently, the salary constant can be concentrated out of the likelihood function in the same manner as the variance of the measurement error.,
