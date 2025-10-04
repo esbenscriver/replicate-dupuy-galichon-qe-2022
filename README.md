@@ -5,7 +5,7 @@ This project aims to replicate the empirical results of [Dupuy and Galichon (202
 Dupuy and Galichon have made their Matlab code and dataset publicly available. However, we were unable to execute their code without making modifications. Therefore, we implemented their estimation procedure in Python, and our implementation is publicly available in this repository.
 
 ## Replication of descriptive statistics
-The data set contains a cross section of 3,454 employed individuals for 2017. Below, we have succesfully replicated Table 1 of Dupuy and Galichon that show some descriptive statistics for the analyzed data set.
+The data set contains a cross section of 3,454 employed individuals for 2017. Below, we have succesfully replicated Table 1 of Dupuy and Galichon that show some descriptive statistics.
 
 |                     |   Mean |   Std |   Min |    Max |
 |:--------------------|-------:|------:|------:|-------:|
@@ -22,7 +22,7 @@ The data set contains a cross section of 3,454 employed individuals for 2017. Be
 | Risk (per 100,000)  |   3.44 | 13.05 |  0.00 | 345.70 |
 | Public              |   0.12 |  0.33 |  0.00 |   1.00 |
 
-where risk measures the average number of fatal injuries per 100,000 by the occupation and industry the individual is employed.
+The variable risk measures the average number of fatal injuries per 100,000 by the occupation and industry the individual is employed.
 
 ## Replication of maximum likelihood estimates
 For estimation, we apply the same transformations to the data as Dupuy and Galichon, who use the logarithm of hourly wages and standardize the variables years of schooling, years of experience, and risk.
