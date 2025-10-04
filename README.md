@@ -52,7 +52,7 @@ From the table we that our estimates for job attributes (row 1-3) closely aligne
 
 Our minimizer failed to converge and terminated after 82 iterations. From our estimation procedure, we obtained an average log-likelihood value of $-5.081$. Using the reported parameter estimates of Dupuy and Galichon (2022), the implied log-likelihood value of $-5.191$ is lower than our own. It should be emphasized that in this exercise we rely on their rounded parameter estimates.
 
-Recall that the measurment errors are assumed to be iid normal distributed with mean zero, $N(0,s^2)$. The table below reports the implied mean and variance of the wage measurement errors given the parameter estimates.
+Recall that the measurment errors are assumed to be iid normal distributed, $N(\mu,s^2)$, with mean zero, $\mu=0$. The table below reports the implied mean and variance of the wage measurement errors given the parameter estimates.
 
 |          |   Dupuy and Galichon (2022) |   Andersen (2025) |
 |:---------|----------------------------:|------------------:|
@@ -71,7 +71,7 @@ $$
     \hat{\mu}(\Theta) = \tfrac{1}{N} \sum_{i=1}^N \hat{\varepsilon}_{i}(\Theta),
 $$
 $$
-    \hat{\sigma}^2(\Theta) = \tfrac{1}{N} \sum_{i=1}^N \left(\hat{\varepsilon}_{i}(\Theta) - \hat{\mu}(\Theta)\right)^2.
+    \hat{s}^2(\Theta) = \tfrac{1}{N} \sum_{i=1}^N \left(\hat{\varepsilon}_{i}(\Theta) - \hat{\mu}(\Theta)\right)^2.
 $$
 
 In turn, we have one less parameter to optimize the log-likelihood function with respect to.
