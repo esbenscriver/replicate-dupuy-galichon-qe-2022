@@ -2,6 +2,8 @@
 # Description
 This project aims at replicating the empirical results of [Dupuy and Galichon (2022)](https://doi.org/10.3982/QE928) who estimates the value of job attributes and workers productivity from US data for 2017. Their estimate relies on maximum likelihood estimation of a one-to-one matching model with transferable utility, where the demand and supply of labor is given by the logit formula. This estimation procedure simultaneously fits both the matching patterns and the wage curve.
 
+Dupuy and Galichon have made their Matlab code and dataset publicly available. However, we were unable to execute their code without making modifications. Therefore, we implemented their estimation procedure in Python, and our implementation is publicly available in this repository.
+
 ## Replication of descriptive statistics
 Below, we have succesfully replicated Table 1 of Dupuy and Galichon (2022) that show some descriptive statistics for the analyzed data set.
 
@@ -48,7 +50,7 @@ From the table we that our estimates for job attributes (row 1-3) closely aligne
 | Scale parameter (workers)     |                       0.046 |             0.047 |
 | Scale parameter (firms)       |                       2.233 |             1.977 |
 
-In our estimation procedure we obtain a average log-likelihood value of $-5.081$. Given the reported parameter estimates of Dupuy and Galichon (2022), we obtain a lower log-likelihood value of $-5.191$. It should be stressed that in this excersice we rely on their rounded parameter estimates.
+Our minimizer failed to converge and terminated after 82 iterations. From our estimation procedure, we obtained an average log-likelihood value of $-5.081$. Using the reported parameter estimates of Dupuy and Galichon (2022), the implied log-likelihood value of $-5.191$ is lower than our own. It should be emphasized that in this exercise we rely on their rounded parameter estimates.
 
 Recall that the measurment errors are assumed to be iid normal distributed with mean zero, $N(0,s^2)$. The table below reports the implied mean and variance of the wage measurement errors given the parameter estimates.
 
