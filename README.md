@@ -1,6 +1,6 @@
 
 # Description
-This project aims at replicating the empirical results of [Dupuy and Galichon (2022)](https://doi.org/10.3982/QE928) who estimates the value of a statistical life using compensating wage differentials for the risk of fatal injury on the job. Using US data for 2017, they estimate the value of statistical life to be $6.3 million ($2017). Their estimate relies on maximum likelihood estimation of a one-to-one matching model with transferable utility, where the demand and supply of labor is given by the logit formula. The estimation procedure simultaneously fits both the matching patterns and the wage curve.
+This project aims at replicating the empirical results of [Dupuy and Galichon (2022)](https://doi.org/10.3982/QE928) who estimates the value of job attributes and workers productivity from US data for 2017. Their estimate relies on maximum likelihood estimation of a one-to-one matching model with transferable utility, where the demand and supply of labor is given by the logit formula. This estimation procedure simultaneously fits both the matching patterns and the wage curve.
 
 ## Replication of descriptive statistics
 Below, we have succesfully replicated Table 1 of Dupuy and Galichon (2022) that show some descriptive statistics for the analyzed data set.
@@ -21,7 +21,9 @@ Below, we have succesfully replicated Table 1 of Dupuy and Galichon (2022) that 
 | Public              |   0.12 |  0.33 |  0.00 |   1.00 |
 
 ## Replication of maximum likelihood estimates
-The table below compares our estimates to Dupuy and Galichon (2022).
+The table below compares our estimates to Dupuy and Galichon (2022). As shown we are not able to fully recover their estimates.
+
+From the table we that our estimates for job attributes (row 1-3) closely aligned with their estimates. However, the estimated worker productivity terms (row 4-14) do not match their estimates. Our estimated salary constant and scale parameter of the firms tast-shocks also differ substantially from their estimates.
 
 |                               |   Dupuy and Galichon (2022) |   Andersen (2025) |
 |:------------------------------|----------------------------:|------------------:|
@@ -46,7 +48,9 @@ The table below compares our estimates to Dupuy and Galichon (2022).
 | Scale parameter (workers)     |                       0.046 |             0.047 |
 | Scale parameter (firms)       |                       2.233 |             1.977 |
 
-The table below reports the implied mean and variance of the wage measurement errors given the parameter estimates.
+In our estimation procedure we obtain a average log-likelihood value of $-5.081$. Given the reported parameter estimates of Dupuy and Galichon (2022), we obtain a lower log-likelihood value of $-5.191$. It should be stressed that in this excersice we rely on their rounded parameter estimates.
+
+Recall that the measurment errors are assumed to be iid normal distributed with mean zero, $N(0,s^2)$. The table below reports the implied mean and variance of the wage measurement errors given the parameter estimates.
 
 |          |   Dupuy and Galichon (2022) |   Andersen (2025) |
 |:---------|----------------------------:|------------------:|

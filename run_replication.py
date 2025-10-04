@@ -115,6 +115,8 @@ summary_stats.to_markdown("output/summary_stats.md", floatfmt=".2f")
 
 none_dummy_columns = ["x_yrseduc", "x_exp", "y_risk_rateh_occind_ave"]
 
+zbar = df["wage"].mean()
+
 array_none_dummy = df[none_dummy_columns].to_numpy()
 df[none_dummy_columns] = normalize_variables(array_none_dummy)
 
@@ -343,3 +345,5 @@ pd.DataFrame(estimates_matrix, columns=[f"iter_{i}" for i in range(I)]).round(4)
     f"output/estimation_path_{include_transfer_constant}_scale_{include_scale_parameters}_MatLab_{import_matlab_file}.csv",
     floatfmt=".4f",
 )
+
+print(f"SVL={-estimates[0] * zbar:.2f}")
