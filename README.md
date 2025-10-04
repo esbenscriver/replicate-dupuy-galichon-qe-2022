@@ -50,29 +50,26 @@ From the table we that our estimates for job attributes (row 1-3) closely aligne
 | Scale parameter (workers)     |                       0.046 |             0.047 |
 | Scale parameter (firms)       |                       2.233 |             1.977 |
 
-Our minimizer failed to converge and terminated after 82 iterations. From our estimation procedure, we obtained an average log-likelihood value of $-5.081$. Using the reported parameter estimates of Dupuy and Galichon (2022), the implied log-likelihood value of $-5.191$ is lower than our own. It should be emphasized that in this exercise we rely on their rounded parameter estimates.
+During the maximization of the log-likelihood function, our optimizer terminated after 82 iterations as it failed to converge with a tolerance level of $1e-6$. However, our obtained average log-likelihood value of $-5.081$ is larger than the log-likelihood value of $-5.191$ implied by the estimates of Dupuy and Galichon (2022). It should be emphasized that in this exercise we rely on their rounded parameter estimates.
 
-Recall that the measurment errors are assumed to be iid normal distributed, $N(\mu,s^2)$, with mean zero, $\mu=0$. The table below reports the implied mean and variance of the wage measurement errors given the parameter estimates.
+Recall that the measurment errors are assumed to be iid normal distributed, $N(m,s^2)$, with mean zero, $m=0$. The table below reports the implied mean and variance of the wage measurement errors given the parameter estimates.
 
 |                 |   Dupuy and Galichon (2022) |   Andersen (2025) |
 |:----------------|----------------------------:|------------------:|
-| mean, $\mu$     |                      -0.369 |             0.000 |
+| mean, $m$     |                      -0.369 |             0.000 |
 | variance, $s^2$ |                       0.276 |             0.140 |
 
-Notice, that if the estimated parameters maximize the likelihood function, including a salary constant effectively imposes that the mean of the measurement errors is zero.
-
-Thus, including a salary constant is equivalent to allowing the measurement errors to have a non-zero mean.
-Consequently, the salary constant can be concentrated out of the likelihood function in the same way as the variance of the measurement error,
+Observe that, if the parameter vector $\hat{\Theta}$ maximizes the likelihood function, the inclusion of a salary constant implies that the mean of the measurement error is zero. Hence, including a salary constant is equivalent implies a zero mean for the measurement error. Consequently, the salary constant can be concentrated out of the likelihood function in the same manner as the variance of the measurement error.,
 
 $$
     \hat{\varepsilon}_{i}(\Theta) = w_{i} - \hat{w}_{i}(\Theta), 
 $$
 $$
-    \hat{\mu}(\Theta) = \tfrac{1}{N} \sum_{i=1}^N \hat{\varepsilon}_{i}(\Theta),
+    \hat{m}(\Theta) = \tfrac{1}{N} \sum_{i=1}^N \hat{\varepsilon}_{i}(\Theta),
 $$
 $$
-    \hat{s}^2(\Theta) = \tfrac{1}{N} \sum_{i=1}^N \left(\hat{\varepsilon}_{i}(\Theta) - \hat{\mu}(\Theta)\right)^2.
+    \hat{s}^2(\Theta) = \tfrac{1}{N} \sum_{i=1}^N \left(\hat{\varepsilon}_{i}(\Theta) - \hat{m}(\Theta)\right)^2.
 $$
 
-In turn, we have one less parameter to optimize the log-likelihood function with respect to.
+In turn, we would have one less parameter to optimize the log-likelihood function with respect to.
 
