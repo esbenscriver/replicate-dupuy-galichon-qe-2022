@@ -29,7 +29,7 @@ For estimation, we apply the same transformations to the data as Dupuy and Galic
 
 The table below compares our estimates to Dupuy and Galichon. As shown we are not able to fully recover their estimates.
 
-From the table we that our estimates for job attributes (row 1-3) closely aligned with their estimates. However, the estimated worker productivity terms (row 4-14) do not match their estimates. Our estimated salary constant and scale parameter of the firms tast-shocks also differ substantially from their estimates.
+From the table, we observe that our estimates for job attributes (rows 1–3) closely resemble those of Dupuy and Galichon. However, the estimated worker productivity terms (rows 4–14) do not match their estimates. Additionally, our estimated salary constant and the scale parameter of the firms’ taste shocks differ substantially from their reported values.
 
 |                               |   Dupuy and Galichon (2022) |   Andersen (2025) |
 |:------------------------------|----------------------------:|------------------:|
