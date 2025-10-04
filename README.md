@@ -63,7 +63,7 @@ Recall that the measurment errors, $\varepsilon_{i}$, are assumed to be iid norm
 | mean, $m$       |                      -0.369 |             0.000 |
 | variance, $s^2$ |                       0.276 |             0.140 |
 
-Observe that, if the parameter vector $\hat{\Theta}$ maximizes the likelihood function, the inclusion of a salary constant implies that the mean of the measurement error is zero. Hence, including a salary constant is equivalent implies a zero mean for the measurement error. Consequently, the salary constant can be concentrated out of the likelihood function in the same manner as the variance of the measurement error.,
+Observe that, if the parameter vector $\hat{\Theta}$ maximizes the likelihood function, the inclusion of a salary constant implies that the mean of the measurement error is zero. Hence, including a salary constant is equivalent to a zero mean for the measurement error. Consequently, the salary constant can be concentrated out of the likelihood function in the same manner as the variance of the measurement error.,
 
 $$
     \hat{\varepsilon}_{i}(\Theta) = w_{i} - \hat{w}_{i}(\Theta), 
