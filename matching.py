@@ -77,6 +77,7 @@ class MatchingModel(Pytree, mutable=False):
     continuous_distributed_attributes: bool = static_field(default=True)
     include_transfer_constant: bool = static_field(default=True)
     include_scale_parameters: bool = static_field(default=True)
+    reference: int = static_field(default=0)
 
     def ChoiceProbabilities(self, v: Array, axis: int) -> Array:
         """Compute the logit choice probabilities for inside and outside options
@@ -226,7 +227,7 @@ class MatchingModel(Pytree, mutable=False):
 
         # Update transfer
         t_updated = t_initial + adjust_step * jnp.log(demand_Y / demand_X)
-        return t_updated - t_updated[0, 0]  # normalize transfers
+        return t_updated - t_updated[self.reference, self.reference] # center wages around reference match
 
     def solve(
         self,
@@ -344,7 +345,7 @@ class MatchingModel(Pytree, mutable=False):
 
     def moments_of_measurement_error(
         self, model_transfer: Array, observed_transfer: Array
-    ) -> tuple[Array, Array]:
+    ) -> tuple[Array, Array, Array]:
         """Estimates the mean and variance of the normal distributed measurement error of the transfers
 
         Args:
@@ -352,19 +353,27 @@ class MatchingModel(Pytree, mutable=False):
             observed_transfer (Array): observed transfers
 
         Returns:
-            mu (Array): mean of the measurement error
-            sigma^2 (Array): variance of the measurement error
+            mu (Array): 
+        mean of the measurement error
+            sigma^2 (Array): 
+        variance of the measurement error
+            R_squared (Array): 
+        R-squared of measurement error
         """
         error = observed_transfer - model_transfer
 
-        mu = jnp.mean(error)
+        mu = jnp.mean(error)        
 
         if self.include_transfer_constant:
-            return jnp.mean(error**2), mu
+            sigma_sq = jnp.mean(error**2)
         else:
-            return jnp.mean((error - mu) ** 2), mu
+            sigma_sq =  jnp.mean((error - mu) ** 2)
 
-    def compute_moments(self, params: Array, data: Data) -> tuple[Array, Array]:
+        SST = jnp.var(observed_transfer)
+        R_squared = 1 - sigma_sq / SST
+        return sigma_sq, mu, R_squared
+
+    def compute_moments(self, params: Array, data: Data) -> tuple[Array, Array, Array]:
         """Computes the mean and variance of the measurement errors
 
         Args:
@@ -388,35 +397,7 @@ class MatchingModel(Pytree, mutable=False):
             model_transfer = transfer
 
         return self.moments_of_measurement_error(model_transfer, data.transfers)
-    
-    def R_squared(self, params: Array, data: Data) -> Array:
-        """Computes the R-squared of the measurement errors
-
-        Args:
-            params (Array): parameters of agents' utility functions
-            data (Data): observed data
-
-        Returns:
-        R_squared (Array):
-            R-squared of measurement error
-        """
-        mp = self.extract_model_parameters(params)
-        utility_X, utility_Y = self.Utilities_of_agents(mp)
-
-        transfer = self.solve(utility_X, utility_Y, mp) + mp.transfer_constant
-
-        SST = jnp.sum((data.transfers - jnp.mean(data.transfers))**2)
-        if self.continuous_distributed_attributes:
-            model_transfer = jnp.diag(transfer)
-        else:
-            model_transfer = transfer
-
-        SSR = jnp.sum((data.transfers - model_transfer)**2)
-        R_sq = 1 - SSR / SST
-        print(f"R^2: {R_sq}, SSR: {SSR}, SST: {SST}\n")
-
-        return R_sq
-    
+        
     def neg_log_likelihood(self, params: Array, data: Data) -> Array:
         """Computes the negative log-likelihood function
 

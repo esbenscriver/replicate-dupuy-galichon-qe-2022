@@ -17,21 +17,26 @@ from dupuy_galichon_2022 import (
 # Increase precision to 64 bit
 jax.config.update("jax_enable_x64", True)
 
-include_transfer_constant = True
-include_scale_parameters = True
-center_wages = False
+include_transfer_constant = False
+standardize = False
+
+specification_name = f"constant_{include_transfer_constant}_standardize_{standardize}"
 
 print("\n" + "=" * 80)
 print("Replication Settings")
 print("=" * 80)
 print(f"Include transfer constant: {include_transfer_constant}")
-print(f"Include scale parameters: {include_scale_parameters}")  
-print(f"Center wages: {center_wages}")
+print(f"standardize numerical values: {standardize}")
 print("=" * 80+"\n")
 
-def normalize_variables(variables):
+def standardize_variables(variables):
     return (variables - np.mean(variables, axis=0, keepdims=True)) / np.std(
         variables, axis=0, keepdims=True
+    )
+
+def normalize_variables(variables):
+    return (variables - np.min(variables, axis=0, keepdims=True)) / (
+        np.max(variables, axis=0, keepdims=True) - np.min(variables, axis=0, keepdims=True)
     )
 
 
@@ -97,14 +102,14 @@ for col in numeric_columns:
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
 # Create summary statistics table
-print("\n" + "=" * 80)
-print("Summary Statistics Table")
-print("=" * 80)
-
 summary_stats = df[variables_to_describe].describe().T
 summary_stats = summary_stats[["mean", "std", "min", "max"]]
 summary_stats = summary_stats.rename(index=variable_names)
-print(summary_stats)
+
+print("\n" + "=" * 80)
+print("Summary Statistics Table")
+print("=" * 80)
+print(summary_stats.round(2))
 print("=" * 80)
 print(f"Number of observations: {len(df)}")
 print(f"Number of variables: {len(df.columns)}\n")
@@ -114,10 +119,13 @@ summary_stats.to_markdown("output/summary_stats.md", floatfmt=".2f")
 
 none_dummy_columns = ["x_yrseduc", "x_exp", "y_risk_rateh_occind_ave"]
 
-zbar = df["wage"].mean()
+zbar = df["wage"].to_numpy().mean()
 
 array_none_dummy = df[none_dummy_columns].to_numpy()
-df[none_dummy_columns] = normalize_variables(array_none_dummy)
+if standardize is True:
+    df[none_dummy_columns] = standardize_variables(array_none_dummy)
+else:
+    df[none_dummy_columns] = normalize_variables(array_none_dummy)
 
 df["x_exp_sq"] = df["x_exp"].to_numpy() ** 2
 
@@ -134,8 +142,6 @@ X_columns = [
 Y_columns = ["y_risk_rateh_occind_ave", "y_public"]
 y_public_index = 1
 x_yrseduc_index = 0
-
-observed_wage = jnp.log(jnp.asarray(df["wage"].to_numpy()))
 
 X_vars = jnp.asarray(df[X_columns].to_numpy())[:,None,:]
 Y_vars = jnp.asarray(df[Y_columns].to_numpy())[None,:,:]
@@ -174,24 +180,26 @@ covariates_X = jnp.concatenate(
     axis=-1,
 )
 
+observed_wage = jnp.log(jnp.asarray(df["wage"].to_numpy()))
+
 covariates = jnp.concatenate([covariates_X, covariates_Y], axis=-1)
 print(f"{covariates_X.shape = }, {covariates_Y.shape = }")
 df_covariate_stats = pd.DataFrame(
     {
-        "name": covariate_names,
+        "": covariate_names,
         "mean": jnp.mean(covariates, axis=(0, 1)),
         "std": jnp.std(covariates, axis=(0, 1)),
         "min": jnp.min(covariates, axis=(0, 1)),
         "max": jnp.max(covariates, axis=(0, 1)),
     }
-).set_index("name").rename_axis(None)
+).set_index("")
 
-df_covariate_stats.to_markdown("output/covariate_stats.md", floatfmt=".4f")
+df_covariate_stats.to_markdown(f"output/covariate_stats_standardize_{standardize}.md", floatfmt=".4f")
 
-print("=" * 80)
+print("\n" + "=" * 80)
 print("Covariate Statistics Table")
 print("=" * 80)
-print(df_covariate_stats)
+print(df_covariate_stats.round(3))
 print("=" * 80)
 print(f"Number of covariates: {len(df_covariate_stats)}\n")
 
@@ -202,9 +210,10 @@ model = MatchingModel(
     / covariates_X.shape[0],
     marginal_distribution_Y=jnp.ones((covariates_Y.shape[0], 1))
     / covariates_Y.shape[0],
-    continuous_distributed_attributes=True,
     include_transfer_constant=include_transfer_constant,
-    include_scale_parameters=include_scale_parameters,
+    reference=0,
+    continuous_distributed_attributes=True,
+    include_scale_parameters=True,
 )
 
 parameter_names = covariate_names.copy()
@@ -224,47 +233,40 @@ if model.include_scale_parameters is True:
 
 # guess = jnp.asarray(dupuy_galichon_estimates)
 
-I = 20
-estimates_path = jnp.zeros((len(guess), I))
-log_lik_path = jnp.zeros(I)
-for i in range(I):
+max_iter = 20
+estimates_path = jnp.zeros((len(guess), max_iter))
+log_lik_path = jnp.zeros(max_iter)
+for i in range(max_iter):
     print(f"\ni={i+1}: logL(guess)={-model.neg_log_likelihood(guess, data)}")
     estimates = model.fit(guess, data)
     estimates_path = estimates_path.at[:,i].set(estimates)
     log_lik_path = log_lik_path.at[i].set(-model.neg_log_likelihood(estimates, data))
     guess = estimates
 
-print(f"\npath of logL(estimates):\n{log_lik_path.round(4)}")
+print(f"\npath of logL(estimates):\n{log_lik_path.round(6)}")
 
-pd.DataFrame(estimates_path, columns=[f"({i})" for i in range(I)]).to_csv(
-    f"output/estimation_path_{include_transfer_constant}_scale_{include_scale_parameters}.csv"
-)
-
-if include_transfer_constant is True and include_scale_parameters is True:
+if include_transfer_constant is True and standardize is True:
     dupuy_galichon_estimates = jnp.asarray(dupuy_galichon_estimates)
     df_estimates = pd.DataFrame(
         {
-            "name": parameter_names,
+            "": parameter_names,
             "Dupuy and Galichon (2022)": dupuy_galichon_estimates,
             "Andersen (2025)": estimates,
         }
-    ).round(3).set_index("name").rename_axis(None)
-    variance_DG, mean_DG = model.compute_moments(dupuy_galichon_estimates, data)
-    variance, mean = model.compute_moments(estimates, data)
+    ).set_index("")
+    variance_DG, mean_DG, R2_DG = model.compute_moments(dupuy_galichon_estimates, data)
+    variance, mean, R2 = model.compute_moments(estimates, data)
 
     df_moments = pd.DataFrame(
         {
-            "name": ["mean", "variance"],
+            "": ["mean", "variance"],
             "Dupuy and Galichon (2022)": jnp.asarray([mean_DG, variance_DG]),
             "Andersen (2025)": jnp.asarray([mean, variance]),
         }
-    ).set_index("name").rename_axis(None)
+    ).set_index("")
 
     logL_DG = -model.neg_log_likelihood(dupuy_galichon_estimates, data)
     logL = -model.neg_log_likelihood(estimates, data)
-
-    R2_DG = model.R_squared(dupuy_galichon_estimates, data)
-    R2 = model.R_squared(estimates, data)
 
     df_objectives = pd.DataFrame(
         {
@@ -272,47 +274,50 @@ if include_transfer_constant is True and include_scale_parameters is True:
             "Dupuy and Galichon (2022)": [logL_DG, R2_DG],
             "Andersen (2025)": [logL, R2],
         }
-    ).set_index("").rename_axis(None)
+    ).set_index("")
 else:
     df_estimates = pd.DataFrame(
         {
             "": parameter_names,
             "estimates": estimates,
         }
-    ).set_index("name").rename_axis(None)
-    variance, mean = model.compute_moments(estimates, data)
+    ).set_index("")
+    variance, mean, R2 = model.compute_moments(estimates, data)
 
     df_moments = pd.DataFrame(
         {
-            "name": ["mean", "variance"],
+            "": ["mean", "variance"],
             "estimates": jnp.asarray([mean, variance]),
         }
-    ).set_index("name").rename_axis(None)
+    ).set_index("")
 
     logL = -model.neg_log_likelihood(estimates, data)
-    R2 = model.R_squared(estimates, data)
 
     df_objectives = pd.DataFrame(
         {
             "": ["Log-likelihood", "R-squared"],
             "fit": [logL, R2],
         }
-    ).set_index("").rename_axis(None)
+    ).set_index("")
 
 print("\n" + "=" * 80)
 print("Parameter Estimates")
 print("=" * 80)
-print(df_estimates)
+print(df_estimates.round(3))
 print("=" * 80)
-print(f"Number of estimated parameters: {len(df_estimates)}\n")
+print(f"Number of estimated parameters: {len(df_estimates)}")
 
-print("=" * 80)
+print("\n" + "=" * 80)
 print("Estimated Moments of Measurement Errors")
 print("=" * 80)
-print(df_moments)
+print(df_moments.round(3))
 print("=" * 80)
 
-specification_name = f"constant_{include_transfer_constant}_scale_{include_scale_parameters}_centering_{center_wages}"
+print("\n" + "=" * 80)
+print("Model fit")
+print("=" * 80)
+print(df_objectives.round(3))
+print("=" * 80)
 
 df_estimates.to_markdown(
     f"output/estimated_parameters_{specification_name}.md",
@@ -325,6 +330,10 @@ df_moments.to_markdown(
 df_objectives.to_markdown(
     f"output/objective_{specification_name}.md",
     floatfmt=".3f",
+)
+
+pd.DataFrame(estimates_path, columns=[f"({i})" for i in range(max_iter)]).to_csv(
+    f"output/estimation_path_{specification_name}.csv"
 )
 
 print(f"SVL={-estimates[0] * zbar:.2f}")
