@@ -4,7 +4,7 @@ This project aims to replicate the empirical results of [Dupuy and Galichon (202
 
 Dupuy and Galichon have made their Matlab code and dataset publicly available. However, we were unable to execute their code without making modifications. Therefore, we implemented their estimation procedure in Python, and our implementation is publicly available in this repository.
 
-From our estimation results we conclude, that the parameter results of Dupuy and Galichon are not fully replicable.
+Based on our estimation results, we find that the parameter estimates reported by Dupuy and Galichon cannot be fully reproduced.
 
 ## Replication of descriptive statistics
 The dataset consists of a cross-sectional sample of 3,454 employed individuals from 2017. Below, we successfully replicate Table 1 from Dupuy and Galichon, which presents descriptive statistics.
