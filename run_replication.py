@@ -17,9 +17,9 @@ from dupuy_galichon_2022 import (
 # Increase precision to 64 bit
 jax.config.update("jax_enable_x64", True)
 
-include_transfer_constant = False
+include_transfer_constant = True
 standardize = True
-estimate = True
+estimate = False
 
 if standardize:
     log_transform_scale = False
@@ -277,7 +277,7 @@ if include_transfer_constant and standardize:
         {
             "": parameter_names,
             "Dupuy and Galichon (2022)": dupuy_galichon_estimates,
-            "Andersen (2025)": estimates,
+            "Our estimates": estimates,
         }
     ).set_index("")
     variance_DG, mean_DG, R2_DG = model.compute_moments(dupuy_galichon_estimates, data)
@@ -285,9 +285,9 @@ if include_transfer_constant and standardize:
 
     df_moments = pd.DataFrame(
         {
-            "": ["mean", "variance"],
+            "": ["mean, $m$", "variance, $s^2$"],
             "Dupuy and Galichon (2022)": jnp.asarray([mean_DG, variance_DG]),
-            "Andersen (2025)": jnp.asarray([mean, variance]),
+            "Our estimates": jnp.asarray([mean, variance]),
         }
     ).set_index("")
 
@@ -298,7 +298,7 @@ if include_transfer_constant and standardize:
         {
             "": ["Log-likelihood", "R-squared"],
             "Dupuy and Galichon (2022)": [logL_DG, R2_DG],
-            "Andersen (2025)": [logL, R2],
+            "Our estimates": [logL, R2],
         }
     ).set_index("")
 else:
