@@ -3,7 +3,7 @@ from jax import numpy as jnp
 
 import pandas as pd
 
-from matching import MatchingModel, Data, ModelParameters
+from matching import MatchingModel, Data
 
 # Increase precision to 64 bit
 jax.config.update("jax_enable_x64", True)
@@ -15,7 +15,7 @@ log_transform_scale = False
 simulate_marginal_distributions = True
 
 # Set dimensions
-X, Y, N, M = 50, 30, 5, 3
+X, Y, N, M = 1000, 1000, 3, 14
 
 print("=" * 80)
 print("Simulation Settings")
@@ -26,11 +26,12 @@ print(f"Number of worker covariates: {N}")
 print(f"Number of firm covariates: {M}")
 print(f"Include transfer constant: {include_transfer_constant}")
 print(f"Include scale parameters: {include_scale_parameters}")
+print(f"Log-transform scale parameters: {log_transform_scale}")
 print(f"Simulate marginal distributions: {simulate_marginal_distributions}")
 print("=" * 80)
 
-covariates_X = jax.random.normal(jax.random.PRNGKey(111), (X, Y, N))
-covariates_Y = jax.random.normal(jax.random.PRNGKey(112), (X, Y, M))
+covariates_X = jax.random.uniform(jax.random.PRNGKey(111), (X, Y, N))
+covariates_Y = jax.random.uniform(jax.random.PRNGKey(112), (X, Y, M))
 
 if simulate_marginal_distributions is True:
     m_X = jax.random.uniform(jax.random.PRNGKey(211), (X, 1))
@@ -60,7 +61,7 @@ if include_scale_parameters and log_transform_scale:
 transfer_constant = jnp.asarray([1.0])
 
 # set mean and variance of measurement errors
-mu, sigma = transfer_constant, jnp.asarray([0.01])
+mu, sigma = transfer_constant, jnp.asarray([0.001])
 
 # Simulate data
 errors = mu + jnp.sqrt(sigma) * jax.random.normal(jax.random.PRNGKey(411), (X, Y))
@@ -131,7 +132,7 @@ df_estimates = pd.DataFrame(
         "true parameters": parameter_values,
         "estimated parameters": estimates,
     }
-)
+).set_index("")
 
 print("\n" + "=" * 80)
 print("Parameter Estimates")
@@ -150,7 +151,7 @@ df_moments = pd.DataFrame(
         "true parameters": jnp.concatenate([mu, sigma], axis=0),
         "estimated parameters": jnp.asarray([mean, variance]),
     }
-)
+).set_index("")
 print("\n" + "=" * 80)
 print("Estimated Moments of Measurement Errors")
 print("=" * 80)
