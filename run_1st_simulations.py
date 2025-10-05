@@ -10,6 +10,7 @@ jax.config.update("jax_enable_x64", True)
 
 include_transfer_constant = False
 include_scale_parameters = True
+log_transform_scale = False
 
 simulate_marginal_distributions = True
 
@@ -46,12 +47,15 @@ assert jnp.isclose(jnp.sum(marginal_distribution_X), jnp.sum(marginal_distributi
 beta_X = -jax.random.uniform(jax.random.PRNGKey(311), (N,))
 beta_Y = jax.random.uniform(jax.random.PRNGKey(312), (M,))
 
-if include_scale_parameters is True:
-    sigma_X = jnp.asarray([2.00])
-    sigma_Y = jnp.asarray([1.50])
-else:
-    sigma_X = jnp.asarray([1.0])
-    sigma_Y = jnp.asarray([1.0])
+parameter_names_X = [f"beta_X {n}" for n in range(N)]
+parameter_names_Y = [f"beta_Y {m}" for m in range(M)]
+
+sigma_X = jnp.asarray([2.00])
+sigma_Y = jnp.asarray([1.50])
+
+if include_scale_parameters and log_transform_scale:
+    sigma_X = jnp.log(sigma_X)
+    sigma_Y = jnp.log(sigma_Y)
 
 transfer_constant = jnp.asarray([1.0])
 
@@ -61,6 +65,18 @@ mu, sigma = transfer_constant, jnp.asarray([0.01])
 # Simulate data
 errors = mu + jnp.sqrt(sigma) * jax.random.normal(jax.random.PRNGKey(411), (X, Y))
 
+parameter_values = jnp.concatenate([beta_X, beta_Y], axis=0)
+
+parameter_names = parameter_names_X + parameter_names_Y
+
+if include_transfer_constant:
+    parameter_values = jnp.concatenate([parameter_values, transfer_constant], axis=0)
+    parameter_names += ["salary constant"]
+
+if include_scale_parameters:
+    parameter_values = jnp.concatenate([parameter_values, sigma_X, sigma_Y], axis=0)
+    parameter_names += ["scale parameter (workers)", "scale parameter (firms)"]
+
 model = MatchingModel(
     covariates_X=covariates_X,
     covariates_Y=covariates_Y,
@@ -69,25 +85,9 @@ model = MatchingModel(
     continuous_distributed_attributes=False,
     include_transfer_constant=include_transfer_constant,
     include_scale_parameters=include_scale_parameters,
+    log_transform_scale=log_transform_scale,
 )
-parameter_names_X = [f"beta_X {n}" for n in range(N)]
-parameter_names_Y = [f"beta_Y {m}" for m in range(M)]
-
-parameter_names = parameter_names_X + parameter_names_Y
-
-if model.include_transfer_constant is True:
-    parameter_names += ["salary constant"]
-if model.include_scale_parameters is True:
-    parameter_names += ["scale parameter (workers)", "scale parameter (firms)"]
-
-mp_true = ModelParameters(
-    beta_X=beta_X,
-    beta_Y=beta_Y,
-    sigma_X=sigma_X,
-    sigma_Y=sigma_Y,
-    transfer_constant=transfer_constant,
-)
-parameter_values = model.class2vec(mp_true)
+mp_true = model.extract_model_parameters(parameter_values)
 
 # Solve model given true parameters
 utility_X, utility_Y = model.Utilities_of_agents(mp_true)
@@ -117,25 +117,21 @@ if model.include_scale_parameters is True:
 print(f"\n{model.neg_log_likelihood(guess, data) = }\n")
 
 estimates = model.fit(guess, data, maxiter=100, verbose=True)
-variance, mean = model.compute_moments(estimates, data)
+variance, mean, R2 = model.compute_moments(estimates, data)
 
 mp_estim = model.extract_model_parameters(estimates)
 
-print("=" * 80)
+df_estimates = pd.DataFrame(
+    {
+        "": parameter_names,
+        "true parameters": parameter_values,
+        "estimated parameters": estimates,
+    }
+)
+
+print("\n" + "=" * 80)
 print("Parameter Estimates")
 print("=" * 80)
-df_estimates = (
-    pd.DataFrame(
-        {
-            "name": parameter_names,
-            "true parameters": parameter_values,
-            "estimated parameters": estimates,
-        }
-    )
-    .round(3)
-    .set_index("name")
-    .rename_axis(None)
-)
 print(df_estimates)
 print("=" * 80)
 print(f"Number of estimated parameters: {len(estimates)}")
@@ -144,21 +140,16 @@ print(f"number of observations: {observed_treansfer.size}\n")
 print(f"{model.neg_log_likelihood(parameter_values, data) = }")
 print(f"{model.neg_log_likelihood(estimates, data) = }\n")
 
-print("=" * 80)
+df_moments = pd.DataFrame(
+    {
+        "": ["mean", "variance"],
+        "true parameters": jnp.concatenate([mu, sigma], axis=0),
+        "estimated parameters": jnp.asarray([mean, variance]),
+    }
+)
+print("\n" + "=" * 80)
 print("Estimated Moments of Measurement Errors")
 print("=" * 80)
-df_moments = (
-    pd.DataFrame(
-        {
-            "name": ["mean", "variance"],
-            "true parameters": jnp.concatenate([mu, sigma], axis=0),
-            "estimated parameters": jnp.asarray([mean, variance]),
-        }
-    )
-    .round(3)
-    .set_index("name")
-    .rename_axis(None)
-)
-print(df_moments)
+print(df_moments.round(3))
 print("=" * 80)
-model.R_squared(estimates, data)
+print(f"R2 of measurement errors: {R2.round(3)}")
