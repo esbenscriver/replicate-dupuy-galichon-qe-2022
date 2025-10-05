@@ -8,13 +8,14 @@ Esben Scriver Andersen, Note on solving one-to-one matching models with linear t
 import jax
 import jax.numpy as jnp
 from jax import Array
+from jax.scipy.special import logsumexp
 from jax.scipy.optimize import minimize, OptimizeResults
 
 # import simple_pytree (used to store variables)
 from simple_pytree import Pytree, dataclass, static_field
 
 # import solvers
-from jaxopt import FixedPointIteration, AndersonAcceleration, LBFGS, BFGS
+from jaxopt import FixedPointIteration, AndersonAcceleration
 from squarem_jaxopt import SquaremAcceleration
 
 SolverTypes = (
@@ -101,6 +102,19 @@ class MatchingModel(Pytree, mutable=False):
         # denominator of choice probabilities
         denominator = jnp.sum(nominator, axis=axis, keepdims=True)
         return nominator / denominator
+    
+    def log_ChoiceProbabilities(self, v: Array, axis: int) -> Array:
+        """ compute the log of the logit choice probabililities using logsumexp from scipy.special
+        
+        Args:
+            v (Array): choice-specific payoffs
+            axis (int): axis that describes the choice set
+            
+        Returns:
+            log_p (Array): log of choice probabilities.
+        """
+
+        return v - logsumexp(v, axis=axis, keepdims=True)
 
     def Utility(self, covariates: Array, parameters: Array) -> Array:
         """Computes match-specific utilities
@@ -155,7 +169,23 @@ class MatchingModel(Pytree, mutable=False):
         """
         v_X = self.Payoff_X(transfer, utility_X, sigma_X)
         return self.ChoiceProbabilities(v_X, axis=1)
+    
+    def log_ChoiceProbabilities_X(
+        self, transfer: Array, utility_X: Array, sigma_X: Array
+    ) -> Array:
+        """Compute the log of the logit choice probabililities using logsumexp from scipy.special
+        
+        Args:
+            transfer (Array): match-specific transfers
+            utility_X (Array): match-specific utilities for agents of type X
+            sigma_X (Array): scale parameter for EV type-I shock for agents of type X
 
+        Returns:
+            log_p (Array): log of choice probabilities.
+        """
+        v_X = self.Payoff_X(transfer, utility_X, sigma_X)
+        return self.log_ChoiceProbabilities(v_X, axis=1)
+    
     def ChoiceProbabilities_Y(
         self, transfer: Array, utility_Y: Array, sigma_Y: Array
     ) -> Array:
@@ -170,8 +200,24 @@ class MatchingModel(Pytree, mutable=False):
         """
         v_Y = self.Payoff_Y(transfer, utility_Y, sigma_Y)
         return self.ChoiceProbabilities(v_Y, axis=0)
+    
+    def log_ChoiceProbabilities_Y(
+        self, transfer: Array, utility_Y: Array, sigma_Y: Array
+    ) -> Array:
+        """Compute the log of the logit choice probabililities using logsumexp from scipy.special
+        
+        Args:
+            transfer (Array): match-specific transfers
+            utility_Y (Array): match-specific utilities for agents of type Y
+            sigma_Y (Array): scale parameter for EV type-I shock for agents of type Y
 
-    def Demand_X(self, transfer: Array, utility_X: Array, sigma_X) -> Array:
+        Returns:
+            log_p (Array): log of choice probabilities.
+        """
+        v_Y = self.Payoff_Y(transfer, utility_Y, sigma_Y)
+        return self.log_ChoiceProbabilities(v_Y, axis=0)
+
+    def log_Demand_X(self, transfer: Array, utility_X: Array, sigma_X) -> Array:
         """Computes agents of type X's demand for agents of type Y
 
         Args:
@@ -181,11 +227,11 @@ class MatchingModel(Pytree, mutable=False):
         Returns:
             demand (Array): demand for inside options
         """
-        return self.marginal_distribution_X * self.ChoiceProbabilities_X(
+        return jnp.log(self.marginal_distribution_X) + self.log_ChoiceProbabilities_X(
             transfer, utility_X, sigma_X
         )
 
-    def Demand_Y(self, transfer: Array, utility_Y: Array, sigma_Y) -> Array:
+    def log_Demand_Y(self, transfer: Array, utility_Y: Array, sigma_Y) -> Array:
         """Computes agents of type Y's demand for agents of type X
 
         Args:
@@ -195,7 +241,7 @@ class MatchingModel(Pytree, mutable=False):
         Returns:
             demand (Array): demand for inside options
         """
-        return self.marginal_distribution_Y * self.ChoiceProbabilities_Y(
+        return jnp.log(self.marginal_distribution_Y) + self.log_ChoiceProbabilities_Y(
             transfer, utility_Y, sigma_Y
         )
 
@@ -217,18 +263,18 @@ class MatchingModel(Pytree, mutable=False):
             t_updated (Array): updated transfers
         """
         # Calculate demand for both sides of the market
-        demand_X = self.Demand_X(
+        log_demand_X = self.log_Demand_X(
             t_initial, utility_X, mp.sigma_X
-        )  # type X's demand for type Y
-        demand_Y = self.Demand_Y(
+        )
+        log_demand_Y = self.log_Demand_Y(
             t_initial, utility_Y, mp.sigma_Y
-        )  # type Y's demand for type X
+        )
 
         adjust_step = (mp.sigma_X * mp.sigma_Y) / (mp.sigma_X + mp.sigma_Y)
 
         # Update transfer
-        t_updated = t_initial + adjust_step * jnp.log(demand_Y / demand_X)
-        return t_updated - t_updated[self.reference, self.reference] # center wages around reference match
+        t_updated = t_initial + adjust_step * (log_demand_Y - log_demand_X)
+        return t_updated - t_updated[self.reference, self.reference] # normalize transfers
 
     def solve(
         self,
@@ -420,19 +466,19 @@ class MatchingModel(Pytree, mutable=False):
 
         if self.continuous_distributed_attributes:
             model_transfer = jnp.diag(transfer) + mp.transfer_constant
-            pX = jnp.diag(self.ChoiceProbabilities_X(transfer, utility_X, mp.sigma_X))
-            pY = jnp.diag(self.ChoiceProbabilities_Y(transfer, utility_Y, mp.sigma_Y))
+            log_pX = jnp.diag(self.log_ChoiceProbabilities_X(transfer, utility_X, mp.sigma_X))
+            log_pY = jnp.diag(self.log_ChoiceProbabilities_Y(transfer, utility_Y, mp.sigma_Y))
         else:
             model_transfer = transfer + mp.transfer_constant
-            pX = self.ChoiceProbabilities_X(transfer, utility_X, mp.sigma_X)
-            pY = self.ChoiceProbabilities_Y(transfer, utility_Y, mp.sigma_Y)
+            log_pX = self.log_ChoiceProbabilities_X(transfer, utility_X, mp.sigma_X)
+            log_pY = self.log_ChoiceProbabilities_Y(transfer, utility_Y, mp.sigma_Y)
 
         number_of_observations = data.transfers.size + 2 * data.matches.sum()
 
         variance_of_error = self.moments_of_measurement_error(model_transfer, data.transfers)[0]
 
         log_lik_transfers= -jnp.log(variance_of_error) * (data.transfers.size / 2)
-        log_lik_matches = jnp.sum(data.matches * (jnp.log(pX) + jnp.log(pY)))
+        log_lik_matches = jnp.sum(data.matches * (log_pX + log_pY))
         
         neg_log_lik = -(log_lik_transfers + log_lik_matches) / number_of_observations
 

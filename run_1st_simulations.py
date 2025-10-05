@@ -91,17 +91,21 @@ mp_true = model.extract_model_parameters(parameter_values)
 
 # Solve model given true parameters
 utility_X, utility_Y = model.Utilities_of_agents(mp_true)
+assert jnp.allclose(
+    jnp.exp(model.log_ChoiceProbabilities(utility_X, axis=1)), 
+    model.ChoiceProbabilities(utility_X, axis=1)
+)
 transfer = model.solve(
     utility_X=utility_X, utility_Y=utility_Y, mp=mp_true, verbose=True
 )
 
 # Simulate observed data
-observed_matches_X = model.Demand_X(
+observed_matches_X = jnp.exp(model.log_Demand_X(
     transfer=transfer, utility_X=utility_X, sigma_X=mp_true.sigma_X
-)
-observed_matches_Y = model.Demand_Y(
+))
+observed_matches_Y = jnp.exp(model.log_Demand_Y(
     transfer=transfer, utility_Y=utility_Y, sigma_Y=mp_true.sigma_Y
-)
+))
 assert jnp.allclose(observed_matches_X, observed_matches_Y)
 observed_treansfer = transfer + errors
 

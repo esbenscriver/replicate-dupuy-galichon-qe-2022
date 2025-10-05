@@ -18,8 +18,8 @@ from dupuy_galichon_2022 import (
 jax.config.update("jax_enable_x64", True)
 
 include_transfer_constant = False
-standardize = False
-estimate = False
+standardize = True
+estimate = True
 
 if standardize:
     log_transform_scale = False
