@@ -19,6 +19,12 @@ jax.config.update("jax_enable_x64", True)
 
 include_transfer_constant = False
 standardize = False
+estimate = False
+
+if standardize:
+    log_transform_scale = False
+else:
+    log_transform_scale = True
 
 specification_name = f"constant_{include_transfer_constant}_standardize_{standardize}"
 
@@ -27,12 +33,14 @@ print("Replication Settings")
 print("=" * 80)
 print(f"Include transfer constant: {include_transfer_constant}")
 print(f"standardize numerical values: {standardize}")
+print(f"log transform scale parameters: {log_transform_scale}")
 print("=" * 80+"\n")
 
 def standardize_variables(variables):
     return (variables - np.mean(variables, axis=0, keepdims=True)) / np.std(
         variables, axis=0, keepdims=True
     )
+
 
 def normalize_variables(variables):
     return (variables - np.min(variables, axis=0, keepdims=True)) / (
@@ -211,41 +219,59 @@ model = MatchingModel(
     marginal_distribution_Y=jnp.ones((covariates_Y.shape[0], 1))
     / covariates_Y.shape[0],
     include_transfer_constant=include_transfer_constant,
+    log_transform_scale=log_transform_scale,
     reference=0,
     continuous_distributed_attributes=True,
     include_scale_parameters=True,
 )
 
 parameter_names = covariate_names.copy()
-if model.include_transfer_constant is True:
+if model.include_transfer_constant:
     parameter_names += ["Salary constant"]
 
-if model.include_scale_parameters is True:
+if model.include_scale_parameters:
     parameter_names += ["Scale parameter (workers)", "Scale parameter (firms)"]
 
 data = Data(transfers=observed_wage, matches=jnp.ones_like(observed_wage, dtype=float))
 
-guess = jnp.zeros(len(covariate_names))
-if model.include_transfer_constant is True:
-    guess = jnp.concatenate([guess, jnp.array([0.0])], axis=0)
-if model.include_scale_parameters is True:
-    guess = jnp.concatenate([guess, jnp.array([1.0, 1.0])], axis=0)
+if estimate:
+    guess = jnp.zeros(len(covariate_names))
 
-# guess = jnp.asarray(dupuy_galichon_estimates)
+    if model.include_transfer_constant:
+        guess = jnp.concatenate([guess, jnp.array([0.0])], axis=0)
 
-max_iter = 20
-estimates_path = jnp.zeros((len(guess), max_iter))
-log_lik_path = jnp.zeros(max_iter)
-for i in range(max_iter):
-    print(f"\ni={i+1}: logL(guess)={-model.neg_log_likelihood(guess, data)}")
-    estimates = model.fit(guess, data)
-    estimates_path = estimates_path.at[:,i].set(estimates)
-    log_lik_path = log_lik_path.at[i].set(-model.neg_log_likelihood(estimates, data))
-    guess = estimates
+    if model.include_scale_parameters and model.log_transform_scale:
+        guess = jnp.concatenate([guess, jnp.array([0.0, 0.0])], axis=0)
+    elif model.include_scale_parameters and not model.log_transform_scale:
+        guess = jnp.concatenate([guess, jnp.array([1.0, 1.0])], axis=0)
 
-print(f"\npath of logL(estimates):\n{log_lik_path.round(6)}")
+    # guess = jnp.asarray(dupuy_galichon_estimates)
+    print(f"\ninitial guess:\n{guess}")
 
-if include_transfer_constant is True and standardize is True:
+    max_iter = 20
+    estimates_raw_path = jnp.zeros((len(guess), max_iter))
+    log_lik_path = jnp.zeros(max_iter)
+    for i in range(max_iter):
+        print(f"\ni={i+1}: logL(guess)={-model.neg_log_likelihood(guess, data)}")
+        estimates_raw = model.fit(guess, data)
+        estimates_raw_path = estimates_raw_path.at[:,i].set(estimates_raw)
+        log_lik_path = log_lik_path.at[i].set(-model.neg_log_likelihood(estimates_raw, data))
+        guess = estimates_raw
+
+    pd.DataFrame(estimates_raw_path, columns=[f"({i})" for i in range(max_iter)]).to_csv(
+        f"output/estimation_path_{specification_name}.csv"
+    )
+
+    estimates = model.transform_parameters(estimates_raw)
+    print(f"\npath of logL(estimates):\n{log_lik_path.round(6)}")
+else:
+    # Load csv file with estimates from previous run
+    estimates_raw_path = pd.read_csv(f"output/estimation_path_{specification_name}.csv", index_col=0).to_numpy()
+    estimates_raw = jnp.asarray(estimates_raw_path[:,-1])
+    estimates = model.transform_parameters(estimates_raw)
+    print(f"\nLoaded estimates from file:\n {estimates_raw}")
+
+if include_transfer_constant and standardize:
     dupuy_galichon_estimates = jnp.asarray(dupuy_galichon_estimates)
     df_estimates = pd.DataFrame(
         {
@@ -255,7 +281,7 @@ if include_transfer_constant is True and standardize is True:
         }
     ).set_index("")
     variance_DG, mean_DG, R2_DG = model.compute_moments(dupuy_galichon_estimates, data)
-    variance, mean, R2 = model.compute_moments(estimates, data)
+    variance, mean, R2 = model.compute_moments(estimates_raw, data)
 
     df_moments = pd.DataFrame(
         {
@@ -266,7 +292,7 @@ if include_transfer_constant is True and standardize is True:
     ).set_index("")
 
     logL_DG = -model.neg_log_likelihood(dupuy_galichon_estimates, data)
-    logL = -model.neg_log_likelihood(estimates, data)
+    logL = -model.neg_log_likelihood(estimates_raw, data)
 
     df_objectives = pd.DataFrame(
         {
@@ -282,7 +308,7 @@ else:
             "estimates": estimates,
         }
     ).set_index("")
-    variance, mean, R2 = model.compute_moments(estimates, data)
+    variance, mean, R2 = model.compute_moments(estimates_raw, data)
 
     df_moments = pd.DataFrame(
         {
@@ -291,7 +317,7 @@ else:
         }
     ).set_index("")
 
-    logL = -model.neg_log_likelihood(estimates, data)
+    logL = -model.neg_log_likelihood(estimates_raw, data)
 
     df_objectives = pd.DataFrame(
         {
@@ -332,8 +358,4 @@ df_objectives.to_markdown(
     floatfmt=".3f",
 )
 
-pd.DataFrame(estimates_path, columns=[f"({i})" for i in range(max_iter)]).to_csv(
-    f"output/estimation_path_{specification_name}.csv"
-)
-
-print(f"SVL={-estimates[0] * zbar:.2f}")
+print(f"\nSVL={-estimates[0] * zbar:.2f}")

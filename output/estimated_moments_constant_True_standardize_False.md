@@ -1,4 +1,4 @@
 |          |   estimates |
 |:---------|------------:|
-| mean     |         nan |
-| variance |         nan |
+| mean     |       0.001 |
+| variance |       0.141 |

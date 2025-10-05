@@ -78,6 +78,7 @@ class MatchingModel(Pytree, mutable=False):
     include_transfer_constant: bool = static_field(default=True)
     include_scale_parameters: bool = static_field(default=True)
     reference: int = static_field(default=0)
+    log_transform_scale: bool = static_field(default=True)
 
     def ChoiceProbabilities(self, v: Array, axis: int) -> Array:
         """Compute the logit choice probabilities for inside and outside options
@@ -293,7 +294,10 @@ class MatchingModel(Pytree, mutable=False):
         else:
             transfer_constant = jnp.asarray([0.0])
 
-        if self.include_scale_parameters:
+        if self.include_scale_parameters and self.log_transform_scale:
+            sigma_X = jnp.exp(params[-2:-1])
+            sigma_Y = jnp.exp(params[-1:])
+        elif self.include_scale_parameters and not self.log_transform_scale:
             sigma_X = params[-2:-1]
             sigma_Y = params[-1:]
         else:
@@ -308,16 +312,17 @@ class MatchingModel(Pytree, mutable=False):
             sigma_Y=sigma_Y,
         )
 
-    def class2vec(self, mp: ModelParameters) -> Array:
-        """Transform model parameters from ModelParameters class to vector
+    def transform_parameters(self, params_raw: Array) -> Array:
+        """Transform model parameters
 
         Args:
-            mp (ModelParameters): model parameters
+            params_raw (Array): raw model parameters
 
         Returns:
         params (Array):
-            parameters of agents' utility functions
+            transformed model parameters
         """
+        mp = self.extract_model_parameters(params_raw)
         params = jnp.concatenate([mp.beta_X, mp.beta_Y], axis=0)
 
         if self.include_transfer_constant:
@@ -465,7 +470,7 @@ class MatchingModel(Pytree, mutable=False):
             options={"maxiter": maxiter},
         )
         print(
-            f"\niterations: {result.nit}, status: {result.status}, final gradient norm: {jnp.linalg.norm(result.jac)}"
+            f"\niterations: {result.nit}, status: {result.status}, final gradient norm: {jnp.linalg.norm(result.jac):.6f}"
         )
         print(f"\nGradients:\n {result.jac}\n")
         return result.x
