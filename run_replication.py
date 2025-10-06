@@ -127,8 +127,6 @@ summary_stats.to_markdown("output/summary_stats.md", floatfmt=".2f")
 
 none_dummy_columns = ["x_yrseduc", "x_exp", "y_risk_rateh_occind_ave"]
 
-zbar = df["wage"].to_numpy().mean()
-
 array_none_dummy = df[none_dummy_columns].to_numpy()
 if standardize is True:
     df[none_dummy_columns] = standardize_variables(array_none_dummy)
@@ -366,5 +364,4 @@ df_objectives.to_markdown(
     floatfmt=".3f",
 )
 
-print(f"\nSVL={-estimates[0] * zbar:.2f}")
 print(f"{observed_wage.mean() = :.3f}")
