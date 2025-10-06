@@ -17,4 +17,4 @@ wheels/
 *.pdf
 *.csv
 
-simulations/
+.simulations
