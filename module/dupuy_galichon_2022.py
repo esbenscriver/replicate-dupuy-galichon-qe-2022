@@ -1,3 +1,7 @@
+"""
+Module containing variable names and parameter estimates from Dupuy and Galichon (2022), https://doi.org/10.3982/QE928 
+"""
+
 variables_to_describe = [
     "x_yrseduc",
     "x_exp",
