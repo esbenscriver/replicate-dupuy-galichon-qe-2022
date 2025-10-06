@@ -17,7 +17,7 @@ from module.dupuy_galichon_2022 import (
 # Increase precision to 64 bit
 jax.config.update("jax_enable_x64", True)
 
-include_transfer_constant = True
+include_transfer_constant = False
 standardize = True
 estimate = True
 
@@ -232,47 +232,44 @@ if model.include_scale_parameters:
 
 data = Data(transfers=observed_wage, matches=jnp.ones_like(observed_wage, dtype=float))
 
+dupuy_galichon_estimates = jnp.asarray(dupuy_galichon_estimates)
+
 # Estimate model by maximum likelihood
 if estimate:
-    guess = jnp.zeros(len(covariate_names))
+    guess = dupuy_galichon_estimates[:len(covariate_names)]
 
     if model.include_transfer_constant:
-        guess = jnp.concatenate([guess, jnp.array([0.0])], axis=0)
+        guess = jnp.concatenate([guess, dupuy_galichon_estimates[-3:-2]], axis=0)
 
     if model.include_scale_parameters and model.log_transform_scale:
-        guess = jnp.concatenate([guess, jnp.array([0.0, 0.0])], axis=0)
+        guess = jnp.concatenate([guess, jnp.log(dupuy_galichon_estimates[-2:])], axis=0)
     elif model.include_scale_parameters and not model.log_transform_scale:
-        guess = jnp.concatenate([guess, jnp.array([1.0, 1.0])], axis=0)
+        guess = jnp.concatenate([guess, dupuy_galichon_estimates[-2:]], axis=0)
 
-    # guess = jnp.asarray(dupuy_galichon_estimates)
     print(f"\ninitial guess:\n{guess}")
+    print(f"\n logL(guess)={-model.neg_log_likelihood(guess, data)}\n")
 
-    max_iter = 20
-    estimates_raw_path = jnp.zeros((len(guess), max_iter))
-    log_lik_path = jnp.zeros(max_iter)
-    for i in range(max_iter):
-        print(f"\ni={i+1}: logL(guess)={-model.neg_log_likelihood(guess, data)}")
-        estimates_raw = model.fit(guess, data)
-        estimates_raw_path = estimates_raw_path.at[:,i].set(estimates_raw)
-        log_lik_path = log_lik_path.at[i].set(-model.neg_log_likelihood(estimates_raw, data))
-        guess = estimates_raw
-
-    pd.DataFrame(estimates_raw_path, columns=[f"({i})" for i in range(max_iter)]).to_csv(
-        f"output/estimation_path_{specification_name}.csv"
-    )
-
+    estimates_raw = model.fit(guess, data)
     estimates = model.transform_parameters(estimates_raw)
-    print(f"\npath of logL(estimates):\n{log_lik_path.round(6)}")
+
+    print(f"\nestimates_raw:\n{estimates_raw}")
+    print(f"\n logL(estimates_raw)={-model.neg_log_likelihood(estimates_raw, data)}\n")
+
+    pd.DataFrame(estimates_raw, columns=["estimates_raw"]).to_csv(
+        f"output/estimates_raw_{specification_name}.csv"
+    )
 else:
     # Load csv file with estimates from previous run
-    estimates_raw_path = pd.read_csv(f"output/estimation_path_{specification_name}.csv", index_col=0).to_numpy()
-    estimates_raw = jnp.asarray(estimates_raw_path[:,-1])
+    estimates_raw_np = pd.read_csv(
+        f"output/estimation_path_{specification_name}.csv", 
+        index_col=0
+    ).to_numpy()
+    estimates_raw = jnp.asarray(estimates_raw_np[:,-1])
     estimates = model.transform_parameters(estimates_raw)
     print(f"\nLoaded estimates from file:\n {estimates_raw}")
 
 # Create tables with estimation results
 if include_transfer_constant and standardize:
-    dupuy_galichon_estimates = jnp.asarray(dupuy_galichon_estimates)
     df_estimates = pd.DataFrame(
         {
             "": parameter_names,
