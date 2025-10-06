@@ -19,7 +19,7 @@ jax.config.update("jax_enable_x64", True)
 
 include_transfer_constant = True
 standardize = True
-estimate = False
+estimate = True
 
 if standardize:
     log_transform_scale = False
