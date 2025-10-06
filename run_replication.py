@@ -297,8 +297,8 @@ if include_transfer_constant and standardize:
     df_objectives = pd.DataFrame(
         {
             "": ["Log-likelihood", "R-squared"],
-            "Dupuy and Galichon (2022)": [logL_DG, R2_DG],
-            "Our estimates": [logL, R2],
+            "Dupuy and Galichon (2022)": jnp.asarray([logL_DG, R2_DG]),
+            "Our estimates": jnp.asarray([logL, R2]),
         }
     ).set_index("")
 else:
@@ -322,7 +322,7 @@ else:
     df_objectives = pd.DataFrame(
         {
             "": ["Log-likelihood", "R-squared"],
-            "fit": [logL, R2],
+            "fit": jnp.asarray([logL, R2]),
         }
     ).set_index("")
 
