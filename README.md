@@ -1,3 +1,4 @@
+[![Test](https://github.com/esbenscriver/replicate-dupuy-galichon-qe-2022/actions/workflows/test.yml/badge.svg)](https://github.com/esbenscriver/replicate-dupuy-galichon-qe-2022/actions/workflows/test.yml)
 
 # Description
 This project aims to replicate the empirical results of [Dupuy and Galichon (2022)](https://doi.org/10.3982/QE928), who estimate the value of job amenities and labor productivity in the United States for 2017. Their estimation relies on maximum likelihood estimation of a one-to-one matching model with transferable utility, in which the demand and supply of labor are described by a logit specification. This procedure simultaneously fits both the matching patterns and the wage curve.
