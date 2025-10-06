@@ -17,7 +17,7 @@ from module.dupuy_galichon_2022 import (
 # Increase precision to 64 bit
 jax.config.update("jax_enable_x64", True)
 
-include_transfer_constant = False
+include_transfer_constant = True
 standardize = True
 estimate = True
 
