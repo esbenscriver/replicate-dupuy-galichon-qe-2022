@@ -19,7 +19,7 @@ jax.config.update("jax_enable_x64", True)
 
 include_transfer_constant = True
 standardize = True
-estimate = False
+estimate = True
 
 if standardize:
     log_transform_scale = False
@@ -234,6 +234,7 @@ if model.include_scale_parameters:
 
 data = Data(transfers=observed_wage, matches=jnp.ones_like(observed_wage, dtype=float))
 
+# Estimate model by maximum likelihood
 if estimate:
     guess = jnp.zeros(len(covariate_names))
 
@@ -257,6 +258,10 @@ if estimate:
         estimates_raw_path = estimates_raw_path.at[:,i].set(estimates_raw)
         log_lik_path = log_lik_path.at[i].set(-model.neg_log_likelihood(estimates_raw, data))
         guess = estimates_raw
+        import sys; 
+        estimates = model.transform_parameters(estimates_raw)
+        print(f"\nestimates:\n{estimates}")
+        sys.exit()
 
     pd.DataFrame(estimates_raw_path, columns=[f"({i})" for i in range(max_iter)]).to_csv(
         f"output/estimation_path_{specification_name}.csv"
@@ -271,6 +276,7 @@ else:
     estimates = model.transform_parameters(estimates_raw)
     print(f"\nLoaded estimates from file:\n {estimates_raw}")
 
+# Create tables with estimation results
 if include_transfer_constant and standardize:
     dupuy_galichon_estimates = jnp.asarray(dupuy_galichon_estimates)
     df_estimates = pd.DataFrame(
@@ -326,6 +332,7 @@ else:
         }
     ).set_index("")
 
+# Print tables with estimation results
 print("\n" + "=" * 80)
 print("Parameter Estimates")
 print("=" * 80)
@@ -345,6 +352,7 @@ print("=" * 80)
 print(df_objectives.round(3))
 print("=" * 80)
 
+# Save results to Markdown files
 df_estimates.to_markdown(
     f"output/estimated_parameters_{specification_name}.md",
     floatfmt=".3f",
@@ -359,3 +367,4 @@ df_objectives.to_markdown(
 )
 
 print(f"\nSVL={-estimates[0] * zbar:.2f}")
+print(f"{observed_wage.mean() = :.3f}")

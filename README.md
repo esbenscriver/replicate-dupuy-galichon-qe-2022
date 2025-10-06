@@ -4,7 +4,7 @@ This project aims to replicate the empirical results of [Dupuy and Galichon (202
 
 Dupuy and Galichon have made their Matlab code and dataset publicly available. However, we were unable to execute their code without making modifications. Therefore, we implemented their estimation procedure in Python, and our implementation is publicly available in this repository that also includes the dataset.
 
-Based on our estimation results, we find that the parameter estimates reported by Dupuy and Galichon cannot be fully reproduced.
+From our estimation results, we conclude that the parameter estimates reported by Dupuy and Galichon cannot be fully reproduced. Based on their own parameter estimates and the average earnings in their sample, they report a value of statistical life of $6.3 million (in 2017 US dollars). However, as their final dataset does not include information on earnings — only imputed hourly wages — we are unable to verify this calculation.
 
 ## Replication of descriptive statistics
 The dataset consists of a cross-sectional sample of 3,454 employed individuals from 2017. Below, we successfully replicate Table 1 from Dupuy and Galichon, which presents descriptive statistics.
@@ -65,7 +65,7 @@ Recall that the measurment errors, $\varepsilon_{i}$, are assumed to be iid norm
 | mean, $m$       |                      -0.369 |          -0.000 |
 | variance, $s^2$ |                       0.276 |           0.140 |
 
-Observe that, if the parameter vector $\hat{\Theta}$ maximizes the likelihood function, the inclusion of a salary constant implies that the mean of the measurement error is zero. Hence, including a salary constant is equivalent to a zero mean for the measurement error. Consequently, the salary constant can be concentrated out of the likelihood function in the same manner as the variance of the measurement error.,
+Observe that, if the parameter vector $\hat{\Theta}$ maximizes the likelihood function, the inclusion of a salary constant implies that the mean of the measurement error is zero. Hence, including a salary constant is equivalent to a zero mean for the measurement error. Consequently, the salary constant can be concentrated out of the likelihood function in the same manner as the variance of the measurement error,
 
 $$
     \hat{\varepsilon}_{i}(\Theta) = w_{i} - \hat{w}_{i}(\Theta), 
