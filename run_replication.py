@@ -6,8 +6,8 @@ import pandas as pd
 
 import xml.etree.ElementTree as ET
 
-from matching import MatchingModel, Data
-from dupuy_galichon_2022 import (
+from module.matching import MatchingModel, Data
+from module.dupuy_galichon_2022 import (
     variables_to_describe,
     variable_names,
     covariate_names,
@@ -19,7 +19,7 @@ jax.config.update("jax_enable_x64", True)
 
 include_transfer_constant = True
 standardize = True
-estimate = True
+estimate = False
 
 if standardize:
     log_transform_scale = False
