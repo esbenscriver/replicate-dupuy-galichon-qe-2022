@@ -276,6 +276,7 @@ if include_transfer_constant and standardize:
             "": parameter_names,
             "Dupuy and Galichon (2022)": dupuy_galichon_estimates,
             "Our estimates": estimates,
+            "differences": dupuy_galichon_estimates - estimates,
         }
     ).set_index("")
     variance_DG, mean_DG, R2_DG = model.compute_moments(dupuy_galichon_estimates, data)

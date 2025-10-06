@@ -33,28 +33,28 @@ The table below compares our estimates to Dupuy and Galichon. As shown we are no
 
 From the table, we observe that our estimates for job attributes (rows 1–3) closely resemble those of Dupuy and Galichon. However, the estimated worker productivity terms (rows 4–14) do not match their estimates. Additionally, our estimated salary constant and the scale parameter of the firms’ taste shocks differ substantially from their reported values.
 
-|                               |   Dupuy and Galichon (2022) |   Our estimates |
-|:------------------------------|----------------------------:|----------------:|
-| Risk                          |                      -0.023 |          -0.023 |
-| Public                        |                      -0.062 |          -0.061 |
-| Public x Years of schooling   |                       0.081 |           0.082 |
-| Years of schooling            |                       0.057 |           0.054 |
-| Years of experience           |                       0.084 |           0.071 |
-| Female                        |                      -0.404 |          -0.403 |
-| Married                       |                       0.050 |           0.052 |
-| White                         |                       0.046 |           0.048 |
-| Black                         |                      -0.108 |          -0.105 |
-| Asian                         |                      -0.069 |           0.074 |
-| Years of experience (squared) |                      -0.051 |          -0.051 |
-| Risk x Years of schooling     |                      -0.059 |          -0.069 |
-| Risk x Years of experience    |                       0.074 |           0.078 |
-| Risk x Females                |                      -2.388 |          -2.388 |
-| Public x Years of schooling   |                       0.838 |           0.863 |
-| Public x Years of experience  |                       0.096 |           0.212 |
-| Public x Females              |                       0.548 |           0.527 |
-| Salary constant               |                       2.981 |           2.606 |
-| Scale parameter (workers)     |                       0.046 |           0.047 |
-| Scale parameter (firms)       |                       2.233 |           2.223 |
+|                               |   Dupuy and Galichon (2022) |   Our estimates |   differences |
+|:------------------------------|----------------------------:|----------------:|--------------:|
+| Risk                          |                      -0.023 |          -0.023 |         0.000 |
+| Public                        |                      -0.062 |          -0.061 |        -0.001 |
+| Public x Years of schooling   |                       0.081 |           0.082 |        -0.001 |
+| Years of schooling            |                       0.057 |           0.054 |         0.003 |
+| Years of experience           |                       0.084 |           0.071 |         0.013 |
+| Female                        |                      -0.404 |          -0.403 |        -0.001 |
+| Married                       |                       0.050 |           0.052 |        -0.002 |
+| White                         |                       0.046 |           0.048 |        -0.002 |
+| Black                         |                      -0.108 |          -0.105 |        -0.003 |
+| Asian                         |                      -0.069 |           0.074 |        -0.143 |
+| Years of experience (squared) |                      -0.051 |          -0.051 |        -0.000 |
+| Risk x Years of schooling     |                      -0.059 |          -0.069 |         0.010 |
+| Risk x Years of experience    |                       0.074 |           0.078 |        -0.004 |
+| Risk x Females                |                      -2.388 |          -2.388 |         0.000 |
+| Public x Years of schooling   |                       0.838 |           0.863 |        -0.025 |
+| Public x Years of experience  |                       0.096 |           0.212 |        -0.116 |
+| Public x Females              |                       0.548 |           0.527 |         0.021 |
+| Salary constant               |                       2.981 |           2.606 |         0.375 |
+| Scale parameter (workers)     |                       0.046 |           0.047 |        -0.001 |
+| Scale parameter (firms)       |                       2.233 |           2.223 |         0.010 |
 
 During the maximization of the log-likelihood function, our optimizer terminated prematurely as it failed to converge with a tolerance level of $1e-6$. However, our obtained average log-likelihood value of $-5.076$ is much larger than the average log-likelihood value of $-5.191$ implied by the estimates of Dupuy and Galichon. It should be emphasized that in this later exercise we rely on their rounded parameter estimates.
 
