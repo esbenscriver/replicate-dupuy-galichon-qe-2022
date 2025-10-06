@@ -261,12 +261,13 @@ if estimate:
 else:
     # Load csv file with estimates from previous run
     estimates_raw_np = pd.read_csv(
-        f"output/estimation_path_{specification_name}.csv", 
+        f"output/estimates_raw_{specification_name}.csv", 
         index_col=0
-    ).to_numpy()
-    estimates_raw = jnp.asarray(estimates_raw_np[:,-1])
+    ).to_numpy().squeeze()
+    estimates_raw = jnp.asarray(estimates_raw_np)
     estimates = model.transform_parameters(estimates_raw)
     print(f"\nLoaded estimates from file:\n {estimates_raw}")
+    print(f"{estimates_raw_np.shape = }, {estimates_raw.shape = }, {estimates.shape = }")
 
 # Create tables with estimation results
 if include_transfer_constant and standardize:
