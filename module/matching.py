@@ -9,7 +9,7 @@ import jax
 import jax.numpy as jnp
 from jax import Array
 from jax.scipy.special import logsumexp
-from jax.scipy.optimize import minimize, OptimizeResults
+from jax.scipy.optimize import minimize
 
 # import simple_pytree (used to store variables)
 from simple_pytree import Pytree, dataclass, static_field
