@@ -256,10 +256,6 @@ if estimate:
         estimates_raw_path = estimates_raw_path.at[:,i].set(estimates_raw)
         log_lik_path = log_lik_path.at[i].set(-model.neg_log_likelihood(estimates_raw, data))
         guess = estimates_raw
-        import sys; 
-        estimates = model.transform_parameters(estimates_raw)
-        print(f"\nestimates:\n{estimates}")
-        sys.exit()
 
     pd.DataFrame(estimates_raw_path, columns=[f"({i})" for i in range(max_iter)]).to_csv(
         f"output/estimation_path_{specification_name}.csv"
