@@ -24,4 +24,4 @@ jobs:
           uv venv
           source .venv/bin/activate
           uv sync --locked
-          pytest
+          PYTHONPATH=. pytest
