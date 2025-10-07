@@ -17,25 +17,18 @@ from module.dupuy_galichon_2022 import (
 # Increase precision to 64 bit
 jax.config.update("jax_enable_x64", True)
 
-include_transfer_constant = False
 standardize = True
-estimate = True
-
-if standardize:
-    log_transform_scale = False
-else:
-    log_transform_scale = True
+log_transform_scale = False
 
 number_of_starting_values = 4
 number_of_optimizations = 1
 model_names = [f"({g})" for g in range(number_of_starting_values)]
 
-specification_name = f"constant_{include_transfer_constant}_standardize_{standardize}"
+specification_name = f"_standardize_{standardize}"
 
 print("\n" + "=" * 80)
 print("Replication Settings")
 print("=" * 80)
-print(f"Include transfer constant: {include_transfer_constant}")
 print(f"standardize numerical values: {standardize}")
 print(f"log transform scale parameters: {log_transform_scale}")
 print("=" * 80+"\n")
@@ -227,7 +220,7 @@ model = MatchingModel(
     / covariates_X.shape[0],
     marginal_distribution_Y=jnp.ones((covariates_Y.shape[0], 1))
     / covariates_Y.shape[0],
-    include_transfer_constant=include_transfer_constant,
+    include_transfer_constant=False,
     log_transform_scale=log_transform_scale,
     reference=-1,
     continuous_distributed_attributes=True,
@@ -235,82 +228,51 @@ model = MatchingModel(
 )
 
 parameter_names = covariate_names.copy()
-if model.include_transfer_constant:
-    parameter_names += ["Salary constant"]
-
-if model.include_scale_parameters:
-    parameter_names += ["Scale parameter (workers)", "Scale parameter (firms)"]
+parameter_names += ["Scale parameter (workers)", "Scale parameter (firms)"]
 
 data = Data(transfers=observed_wage, matches=jnp.ones_like(observed_wage, dtype=float))
 
 dupuy_galichon_estimates = jnp.asarray(dupuy_galichon_estimates)
 
-# Estimate model by maximum likelihood
-if estimate:
-    guess = dupuy_galichon_estimates[:len(covariate_names)]
-
-    if model.include_transfer_constant:
-        guess = jnp.concatenate([guess, dupuy_galichon_estimates[-3:-2]], axis=0)
-
-    if model.include_scale_parameters and model.log_transform_scale:
-        guess = jnp.concatenate([guess, jnp.log(dupuy_galichon_estimates[-2:])], axis=0)
-    elif model.include_scale_parameters and not model.log_transform_scale:
-        guess = jnp.concatenate([guess, dupuy_galichon_estimates[-2:]], axis=0)
-
-    max_loglik = -jnp.inf
-    max_loglik_idx = 0
-    estimates_raw_sensitivity = jnp.zeros((len(guess), 0))
-    for g in range(number_of_starting_values):
-        if g >0:
-            guess = jax.random.uniform(jax.random.PRNGKey(g), guess.shape)
-
-        estimates_raw_g, estimates_g, loglik_g = mle_estimation(guess, model)
-        loglik_h = -jnp.inf
-        for h in range(number_of_optimizations):
-            if h > 0:
-                estimates_raw_h, estimates_h, loglik_h = mle_estimation(guess, model)
-                
-            if loglik_h > loglik_g:
-                estimates_raw_g, estimates_g, loglik_g = estimates_raw_h, estimates_h, loglik_h
-            else:
-                print(f"{loglik_h > loglik_g = }")
-                break
-            
-            guess = estimates_raw_g
-
-        estimates_raw_sensitivity = jnp.concatenate(
-            [estimates_raw_sensitivity, estimates_raw_g[:,None]], 
-            axis=1,
-        )
-        print(f"estimates_raw_sensitivity:\n{estimates_raw_sensitivity.round(4)}")
-        
-        max_loglik_idx = jnp.where(max_loglik > loglik_g, max_loglik_idx, g)
-        max_loglik = jnp.maximum(max_loglik, loglik_g)
-        print(f"g={g}: max_loglik_idx={max_loglik_idx}, max_loglik={max_loglik:.6f}.")
-
-    estimates_raw = estimates_raw_sensitivity[:,max_loglik_idx]
-    pd.DataFrame(estimates_raw, columns=["estimates_raw"]).to_csv(
-        f"output/estimates_raw_{specification_name}.csv"
-    )
-    print(f"{estimates_raw_sensitivity.shape = }, {len(model_names) = }")
-    pd.DataFrame(estimates_raw_sensitivity, columns=model_names).to_csv(
-        f"output/estimates_raw_sensitivity_{specification_name}.csv"
-    )
+guess = dupuy_galichon_estimates[:len(covariate_names)]
+if model.log_transform_scale:
+    guess = jnp.concatenate([guess, jnp.log(dupuy_galichon_estimates[-2:])], axis=0)
 else:
-    # Load csv file with estimates from previous run
-    estimates_raw_np = pd.read_csv(
-        f"output/estimates_raw_{specification_name}.csv", 
-        index_col=0
-    ).to_numpy().squeeze()
-    estimates_raw = jnp.asarray(estimates_raw_np)
+    guess = jnp.concatenate([guess, dupuy_galichon_estimates[-2:]], axis=0)
 
-    estimates_raw_sensitivity = jnp.asarray(pd.read_csv(
-        f"output/estimates_raw_sensitivity_{specification_name}.csv", 
-        index_col=0
-    ).to_numpy())
+max_loglik = -jnp.inf
+max_loglik_idx = 0
+estimates_raw_sensitivity = jnp.zeros((len(guess), 0))
+for g in range(number_of_starting_values):
+    if g >0:
+        guess = jax.random.uniform(jax.random.PRNGKey(g), guess.shape)
 
+    estimates_raw_g, estimates_g, loglik_g = mle_estimation(guess, model)
+    loglik_h = -jnp.inf
+    for h in range(number_of_optimizations):
+        if h > 0:
+            estimates_raw_h, estimates_h, loglik_h = mle_estimation(guess, model)
+            
+        if loglik_h > loglik_g:
+            estimates_raw_g, estimates_g, loglik_g = estimates_raw_h, estimates_h, loglik_h
+        else:
+            print(f"{loglik_h > loglik_g = }")
+            break
+        
+        guess = estimates_raw_g
+
+    estimates_raw_sensitivity = jnp.concatenate(
+        [estimates_raw_sensitivity, estimates_raw_g[:,None]], 
+        axis=1,
+    )
+    print(f"estimates_raw_sensitivity:\n{estimates_raw_sensitivity.round(4)}")
+    
+    max_loglik_idx = jnp.where(max_loglik > loglik_g, max_loglik_idx, g)
+    max_loglik = jnp.maximum(max_loglik, loglik_g)
+    print(f"g={g}: max_loglik_idx={max_loglik_idx}, max_loglik={max_loglik:.6f}.")
+
+estimates_raw = estimates_raw_sensitivity[:,max_loglik_idx]
 estimates = model.transform_parameters(estimates_raw)
-print(f"\nLoaded estimates from file:\n {estimates_raw}")
 
 estimates_sensitivity = jnp.zeros((len(estimates_raw), 0))
 for g in range(estimates_raw_sensitivity.shape[1]):
@@ -330,20 +292,12 @@ for g in range(estimates_raw_sensitivity.shape[1]):
             axis=0,
     )
 
-estimates_DG = dupuy_galichon_estimates[:len(covariate_names)]
-
-if model.include_transfer_constant:
-    estimates_DG = jnp.concatenate([estimates_DG, dupuy_galichon_estimates[-3:-2]], axis=0)
-
-if model.include_scale_parameters:
-    estimates_DG = jnp.concatenate([estimates_DG, dupuy_galichon_estimates[-2:]], axis=0)
-
 df_estimates = pd.DataFrame(
     {
         "": parameter_names,
-        "Dupuy and Galichon (2022)": estimates_DG,
+        "Dupuy and Galichon (2022)": dupuy_galichon_estimates,
         "Our estimates": estimates,
-        "differences": estimates_DG - estimates,
+        "differences": dupuy_galichon_estimates - estimates,
     }
 ).set_index("")
 variance_DG, mean_DG, R2_DG = model.compute_moments(dupuy_galichon_estimates, data)
@@ -364,7 +318,7 @@ df_objectives = pd.DataFrame(
     {
         "": ["Log-likelihood", "R-squared"],
         "Dupuy and Galichon (2022)": jnp.asarray([logL_DG, R2_DG]),
-        "Our estimates": jnp.asarray([logL, R2]),
+        "Our results": jnp.asarray([logL, R2]),
     }
 ).set_index("")
 df_sensitivity = pd.concat(
@@ -378,7 +332,8 @@ df_loglik = pd.concat(
     [
         pd.DataFrame({"": ['log-likelihood']}),
         pd.DataFrame(loglik_sensitivity[None,:], columns=model_names),
-    ]
+    ],
+    axis=1,
 ).set_index("")
 
 # Print tables with estimation results

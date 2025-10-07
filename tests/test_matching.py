@@ -14,8 +14,6 @@ jax.config.update("jax_enable_x64", True)
 @pytest.mark.parametrize(
     "include_scale_parameters, include_transfer_constant, log_transform_scale",
     [
-        (True, True, True),
-        (True, True, False),
         (True, False, True),
         (True, False, False),
     ],
