@@ -55,9 +55,7 @@ From the table, we observe that our estimates for job attributes (rows 1–3) cl
 | Scale parameter (workers)     |                       0.046 |           0.046 |         0.000 |
 | Scale parameter (firms)       |                       2.233 |           2.078 |         0.155 |
 
-During the maximization of the log-likelihood function, our optimizer terminated prematurely as it failed to converge with a tolerance level of $1e-6$. However, our obtained average log-likelihood value of $-5.076$ is much larger than the average log-likelihood value of $-5.191$ implied by the estimates of Dupuy and Galichon. It should be emphasized that in this later exercise we rely on their rounded parameter estimates.
-
-Due to the issue of premature termination of the optimizer, the obtained estimates are sensitive to the choice of starting values. The reported estimates were obtained using Dupuy and Galichon’s estimated parameters as starting values. We conduct a robustness analysis of the parameter estimates with respect to different starting values in the next section.
+During the maximization of the log-likelihood function, our optimizer terminates prematurely as it fail to converge with a tolerance level of $1e-6$. Hence, we have used several different starting values (including the reported estimates of Dupuy and Galichon) and used the estimates that resulted in the highest likelihood.
 
 Recall that the measurment errors, $\varepsilon_{i}$, are assumed to be iid normal distributed, $N(m,s^2)$, with mean zero, $m=0$. The table below reports the implied mean and variance of the wage measurement errors given the parameter estimates. We estimate the variance of the measurement errors to $0.140$ which corresponds to a $R^2$ of $0.233$.
 
