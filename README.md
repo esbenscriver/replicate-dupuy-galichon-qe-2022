@@ -78,6 +78,4 @@ $$
 
 In turn, we would have one less parameter to optimize the log-likelihood function with respect to.
 
-## Robustness analysis
-In this section we conduct a small robustness analysis of the estimator with respect to different starting values.
 
