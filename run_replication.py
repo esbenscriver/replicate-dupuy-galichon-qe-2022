@@ -24,7 +24,7 @@ number_of_starting_values = 4
 number_of_optimizations = 1
 model_names = [f"({g})" for g in range(number_of_starting_values)]
 
-specification_name = f"_standardize_{standardize}"
+specification_name = f"standardize_{standardize}"
 
 print("\n" + "=" * 80)
 print("Replication Settings")
@@ -56,7 +56,12 @@ def read_excel_xml(file_path):
 
     # Find the worksheet
     worksheet = root.find(".//ss:Worksheet", ns)
+    if worksheet is None:
+        return pd.DataFrame()
+
     table = worksheet.find("ss:Table", ns)
+    if table is None:
+        return pd.DataFrame()
 
     # Extract data
     rows = []

@@ -62,7 +62,7 @@ During the maximization of the log-likelihood function, our optimizer terminates
 | Log-likelihood |                      -5.077 |          -5.076 |
 | R-squared      |                       0.235 |           0.233 |
 
-Recall that Dupuy and Galichon assume that the measurment errors, $\varepsilon_{i}$, are iid normal distributed, $N(m,s^2)$, with mean zero, $m=0$. However, the inclusion of a salary constant is similar to allow the measurement error to have a non-zero mean. Consequently, the salary constant can be concentrated out of the likelihood function in the same manner as the variance of the measurement error,
+Recall that Dupuy and Galichon assume that the measurment errors, $\varepsilon_{i}$, are iid normal distributed, $N(m,s^2)$, with mean zero, $m=0$. However, the inclusion of a salary constant is similar to allow the measurement error to have a non-zero mean. Consequently, the salary constant can be concentrated out of the likelihood function in the same manner as the mean or variance of the measurement error,
 
 $$
     \hat{\varepsilon}_{i}(\Theta) = w_{i} - \hat{w}_{i}(\Theta), 
