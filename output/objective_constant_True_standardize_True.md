@@ -1,4 +1,4 @@
 |                |   Dupuy and Galichon (2022) |   Our estimates |
 |:---------------|----------------------------:|----------------:|
-| Log-likelihood |                      -5.191 |          -5.076 |
-| R-squared      |                      -0.519 |           0.233 |
+| Log-likelihood |                      -5.085 |          -5.077 |
+| R-squared      |                       0.193 |           0.234 |

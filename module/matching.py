@@ -518,7 +518,7 @@ class MatchingModel(Pytree, mutable=False):
         print(
             f"\niterations: {result.nit}, status: {result.status}, final gradient norm: {jnp.linalg.norm(result.jac):.6f}"
         )
-        print(f"\nGradients:\n {result.jac}\n")
+        print(f"\nGradients:\n {result.jac.round(6)}\n")
         return result.x
 
         # result = BFGS(

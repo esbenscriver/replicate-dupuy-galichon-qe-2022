@@ -17,7 +17,7 @@ from module.dupuy_galichon_2022 import (
 # Increase precision to 64 bit
 jax.config.update("jax_enable_x64", True)
 
-include_transfer_constant = True
+include_transfer_constant = False
 standardize = True
 estimate = True
 
@@ -25,6 +25,10 @@ if standardize:
     log_transform_scale = False
 else:
     log_transform_scale = True
+
+number_of_starting_values = 4
+number_of_optimizations = 1
+model_names = [f"({g})" for g in range(number_of_starting_values)]
 
 specification_name = f"constant_{include_transfer_constant}_standardize_{standardize}"
 
@@ -80,6 +84,13 @@ def read_excel_xml(file_path):
     else:
         return pd.DataFrame()
 
+
+def mle_estimation(guess: jax.Array, model: MatchingModel):
+    estimates_raw = model.fit(guess, data)
+    estimates = model.transform_parameters(estimates_raw)
+    loglik = -model.neg_log_likelihood(estimates_raw, data)
+    print(f"\n logL(estimates_raw)={loglik:.6f}\n")
+    return estimates_raw, estimates, loglik
 
 # Read the XML file
 file_path = "Repl_QE/Data/workingdataset_occind.xml"
@@ -218,7 +229,7 @@ model = MatchingModel(
     / covariates_Y.shape[0],
     include_transfer_constant=include_transfer_constant,
     log_transform_scale=log_transform_scale,
-    reference=0,
+    reference=-1,
     continuous_distributed_attributes=True,
     include_scale_parameters=True,
 )
@@ -246,17 +257,44 @@ if estimate:
     elif model.include_scale_parameters and not model.log_transform_scale:
         guess = jnp.concatenate([guess, dupuy_galichon_estimates[-2:]], axis=0)
 
-    print(f"\ninitial guess:\n{guess}")
-    print(f"\n logL(guess)={-model.neg_log_likelihood(guess, data)}\n")
+    max_loglik = -jnp.inf
+    max_loglik_idx = 0
+    estimates_raw_sensitivity = jnp.zeros((len(guess), 0))
+    for g in range(number_of_starting_values):
+        if g >0:
+            guess = jax.random.uniform(jax.random.PRNGKey(g), guess.shape)
 
-    estimates_raw = model.fit(guess, data)
-    estimates = model.transform_parameters(estimates_raw)
+        estimates_raw_g, estimates_g, loglik_g = mle_estimation(guess, model)
+        loglik_h = -jnp.inf
+        for h in range(number_of_optimizations):
+            if h > 0:
+                estimates_raw_h, estimates_h, loglik_h = mle_estimation(guess, model)
+                
+            if loglik_h > loglik_g:
+                estimates_raw_g, estimates_g, loglik_g = estimates_raw_h, estimates_h, loglik_h
+            else:
+                print(f"{loglik_h > loglik_g = }")
+                break
+            
+            guess = estimates_raw_g
 
-    print(f"\nestimates_raw:\n{estimates_raw}")
-    print(f"\n logL(estimates_raw)={-model.neg_log_likelihood(estimates_raw, data)}\n")
+        estimates_raw_sensitivity = jnp.concatenate(
+            [estimates_raw_sensitivity, estimates_raw_g[:,None]], 
+            axis=1,
+        )
+        print(f"estimates_raw_sensitivity:\n{estimates_raw_sensitivity.round(4)}")
+        
+        max_loglik_idx = jnp.where(max_loglik > loglik_g, max_loglik_idx, g)
+        max_loglik = jnp.maximum(max_loglik, loglik_g)
+        print(f"g={g}: max_loglik_idx={max_loglik_idx}, max_loglik={max_loglik:.6f}.")
 
+    estimates_raw = estimates_raw_sensitivity[:,max_loglik_idx]
     pd.DataFrame(estimates_raw, columns=["estimates_raw"]).to_csv(
         f"output/estimates_raw_{specification_name}.csv"
+    )
+    print(f"{estimates_raw_sensitivity.shape = }, {len(model_names) = }")
+    pd.DataFrame(estimates_raw_sensitivity, columns=model_names).to_csv(
+        f"output/estimates_raw_sensitivity_{specification_name}.csv"
     )
 else:
     # Load csv file with estimates from previous run
@@ -265,65 +303,83 @@ else:
         index_col=0
     ).to_numpy().squeeze()
     estimates_raw = jnp.asarray(estimates_raw_np)
-    estimates = model.transform_parameters(estimates_raw)
-    print(f"\nLoaded estimates from file:\n {estimates_raw}")
-    print(f"{estimates_raw_np.shape = }, {estimates_raw.shape = }, {estimates.shape = }")
 
-# Create tables with estimation results
-if include_transfer_constant and standardize:
-    df_estimates = pd.DataFrame(
-        {
-            "": parameter_names,
-            "Dupuy and Galichon (2022)": dupuy_galichon_estimates,
-            "Our estimates": estimates,
-            "differences": dupuy_galichon_estimates - estimates,
-        }
-    ).set_index("")
-    variance_DG, mean_DG, R2_DG = model.compute_moments(dupuy_galichon_estimates, data)
-    variance, mean, R2 = model.compute_moments(estimates_raw, data)
+    estimates_raw_sensitivity = jnp.asarray(pd.read_csv(
+        f"output/estimates_raw_sensitivity_{specification_name}.csv", 
+        index_col=0
+    ).to_numpy())
 
-    df_moments = pd.DataFrame(
-        {
-            "": ["mean, $m$", "variance, $s^2$"],
-            "Dupuy and Galichon (2022)": jnp.asarray([mean_DG, variance_DG]),
-            "Our estimates": jnp.asarray([mean, variance]),
-        }
-    ).set_index("")
+estimates = model.transform_parameters(estimates_raw)
+print(f"\nLoaded estimates from file:\n {estimates_raw}")
 
-    logL_DG = -model.neg_log_likelihood(dupuy_galichon_estimates, data)
-    logL = -model.neg_log_likelihood(estimates_raw, data)
+estimates_sensitivity = jnp.zeros((len(estimates_raw), 0))
+for g in range(estimates_raw_sensitivity.shape[1]):
+    estimates_sensitivity = jnp.concatenate(
+        [   estimates_sensitivity,
+            model.transform_parameters(estimates_raw_sensitivity[:,g])[:,None]
+        ],
+        axis=1,
+    )
+    if g == 0:
+        loglik_sensitivity = -model.neg_log_likelihood(estimates_raw_sensitivity[:,g], data)[None]
+    else:
+        loglik_sensitivity = jnp.concatenate(
+            [   loglik_sensitivity,
+                -model.neg_log_likelihood(estimates_raw_sensitivity[:,g], data)[None]
+            ],
+            axis=0,
+    )
 
-    df_objectives = pd.DataFrame(
-        {
-            "": ["Log-likelihood", "R-squared"],
-            "Dupuy and Galichon (2022)": jnp.asarray([logL_DG, R2_DG]),
-            "Our estimates": jnp.asarray([logL, R2]),
-        }
-    ).set_index("")
-else:
-    df_estimates = pd.DataFrame(
-        {
-            "": parameter_names,
-            "estimates": estimates,
-        }
-    ).set_index("")
-    variance, mean, R2 = model.compute_moments(estimates_raw, data)
+estimates_DG = dupuy_galichon_estimates[:len(covariate_names)]
 
-    df_moments = pd.DataFrame(
-        {
-            "": ["mean", "variance"],
-            "estimates": jnp.asarray([mean, variance]),
-        }
-    ).set_index("")
+if model.include_transfer_constant:
+    estimates_DG = jnp.concatenate([estimates_DG, dupuy_galichon_estimates[-3:-2]], axis=0)
 
-    logL = -model.neg_log_likelihood(estimates_raw, data)
+if model.include_scale_parameters:
+    estimates_DG = jnp.concatenate([estimates_DG, dupuy_galichon_estimates[-2:]], axis=0)
 
-    df_objectives = pd.DataFrame(
-        {
-            "": ["Log-likelihood", "R-squared"],
-            "fit": jnp.asarray([logL, R2]),
-        }
-    ).set_index("")
+df_estimates = pd.DataFrame(
+    {
+        "": parameter_names,
+        "Dupuy and Galichon (2022)": estimates_DG,
+        "Our estimates": estimates,
+        "differences": estimates_DG - estimates,
+    }
+).set_index("")
+variance_DG, mean_DG, R2_DG = model.compute_moments(dupuy_galichon_estimates, data)
+variance, mean, R2 = model.compute_moments(estimates_raw, data)
+
+df_moments = pd.DataFrame(
+    {
+        "": ["mean, $m$", "variance, $s^2$"],
+        "Dupuy and Galichon (2022)": jnp.asarray([mean_DG, variance_DG]),
+        "Our estimates": jnp.asarray([mean, variance]),
+    }
+).set_index("")
+
+logL_DG = -model.neg_log_likelihood(dupuy_galichon_estimates, data)
+logL = -model.neg_log_likelihood(estimates_raw, data)
+
+df_objectives = pd.DataFrame(
+    {
+        "": ["Log-likelihood", "R-squared"],
+        "Dupuy and Galichon (2022)": jnp.asarray([logL_DG, R2_DG]),
+        "Our estimates": jnp.asarray([logL, R2]),
+    }
+).set_index("")
+df_sensitivity = pd.concat(
+    [
+        pd.DataFrame({"": parameter_names}),
+        pd.DataFrame(estimates_sensitivity, columns=model_names),
+    ],
+    axis=1,
+).set_index("")
+df_loglik = pd.concat(
+    [
+        pd.DataFrame({"": ['log-likelihood']}),
+        pd.DataFrame(loglik_sensitivity[None,:], columns=model_names),
+    ]
+).set_index("")
 
 # Print tables with estimation results
 print("\n" + "=" * 80)
@@ -345,6 +401,13 @@ print("=" * 80)
 print(df_objectives.round(3))
 print("=" * 80)
 
+print("\n" + "=" * 80)
+print("Sensitivity analysis")
+print("=" * 80)
+print(df_sensitivity.round(3))
+print("=" * 80)
+print(f"loglik (0-3):\n{loglik_sensitivity.round(6)}")
+
 # Save results to Markdown files
 df_estimates.to_markdown(
     f"output/estimated_parameters_{specification_name}.md",
@@ -357,6 +420,14 @@ df_moments.to_markdown(
 df_objectives.to_markdown(
     f"output/objective_{specification_name}.md",
     floatfmt=".3f",
+)
+df_sensitivity.to_markdown(
+    f"output/sensitivity_{specification_name}.md",
+    floatfmt=".3f",
+)
+df_loglik.to_markdown(
+    f"output/loglik_{specification_name}.md",
+    floatfmt=".6f",
 )
 
 print(f"{observed_wage.mean() = :.3f}")
