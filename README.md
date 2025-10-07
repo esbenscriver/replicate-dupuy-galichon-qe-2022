@@ -55,16 +55,14 @@ From the table, we observe that our estimates for job attributes (rows 1–3) cl
 | Scale parameter (workers)     |                       0.046 |           0.046 |         0.000 |
 | Scale parameter (firms)       |                       2.233 |           2.078 |         0.155 |
 
-During the maximization of the log-likelihood function, our optimizer terminates prematurely as it fail to converge with a tolerance level of $1e-6$. Hence, we have used several different starting values (including the reported estimates of Dupuy and Galichon) and used the estimates that resulted in the highest likelihood.
+During the maximization of the log-likelihood function, our optimizer terminates prematurely because it fails to converge to the specified tolerance level of $10^{-6}$. Therefore, we experimented with several different starting values — including the reported estimates of Dupuy and Galichon — and retained the estimates that achieved the highest likelihood. The table below shows the our achieved log-likelihood value and R-squared. It should be emphasized that the reported results for Dupuy and Galichon are the implied values derived from their rounded parameter estimates.  
 
-Recall that the measurment errors, $\varepsilon_{i}$, are assumed to be iid normal distributed, $N(m,s^2)$, with mean zero, $m=0$. The table below reports the implied mean and variance of the wage measurement errors given the parameter estimates. We estimate the variance of the measurement errors to $0.140$ which corresponds to a $R^2$ of $0.233$.
+|                |   Dupuy and Galichon (2022) |     Our results |
+|:---------------|----------------------------:|----------------:|
+| Log-likelihood |                      -5.077 |          -5.076 |
+| R-squared      |                       0.235 |           0.233 |
 
-|                 |   Dupuy and Galichon (2022) |   Our estimates |
-|:----------------|----------------------------:|----------------:|
-| mean, $m$       |                       3.069 |           3.064 |
-| variance, $s^2$ |                       0.139 |           0.140 |
-
-Observe that, if the parameter vector $\hat{\Theta}$ maximizes the likelihood function, the inclusion of a salary constant implies that the mean of the measurement error is zero. Hence, including a salary constant is equivalent to a zero mean for the measurement error. Consequently, the salary constant can be concentrated out of the likelihood function in the same manner as the variance of the measurement error,
+Recall that Dupuy and Galichon assume that the measurment errors, $\varepsilon_{i}$, are iid normal distributed, $N(m,s^2)$, with mean zero, $m=0$. However, the inclusion of a salary constant is similar to allow the measurement error to have a non-zero mean. Consequently, the salary constant can be concentrated out of the likelihood function in the same manner as the variance of the measurement error,
 
 $$
     \hat{\varepsilon}_{i}(\Theta) = w_{i} - \hat{w}_{i}(\Theta), 
@@ -76,6 +74,11 @@ $$
     \hat{s}^2(\Theta) = \tfrac{1}{N} \sum_{i=1}^N \left(\hat{\varepsilon}_{i}(\Theta) - \hat{m}(\Theta)\right)^2.
 $$
 
-In turn, we would have one less parameter to optimize the log-likelihood function with respect to.
+The table below reports the implied mean and variance of the wage measurement errors given the parameter estimates, where the mean of the measurement can be interpreted as a salary constant. Note that the mean differs from the salary constant reported by Dupuy and Galichon. This is because we use a different normalization of the wage distribution then they impose. We need to impose a normalization, as the wage distribution is otherwise not uniquely determined.
+
+|                 |   Dupuy and Galichon (2022) |   Our estimates |
+|:----------------|----------------------------:|----------------:|
+| mean, $m$       |                       3.069 |           3.064 |
+| variance, $s^2$ |                       0.139 |           0.140 |
 
 
