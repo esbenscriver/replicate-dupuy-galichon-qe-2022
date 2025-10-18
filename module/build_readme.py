@@ -19,12 +19,14 @@ def load_file_content(file_path: str) -> str:
         return ""
 
 
-def build_readme(template_path: str = "output/README.template.md", output_path: str = "README.md"):
+def build_readme(
+    template_path: str = "output/README.template.md", output_path: str = "README.md"
+):
     """Build README.md from template by replacing placeholders with file content."""
     template = Path(template_path).read_text()
 
     # Find all placeholders in the format {{path/to/file.md}}
-    pattern = r'\{\{([^}]+)\}\}'
+    pattern = r"\{\{([^}]+)\}\}"
 
     def replace_placeholder(match):
         file_path = match.group(1)

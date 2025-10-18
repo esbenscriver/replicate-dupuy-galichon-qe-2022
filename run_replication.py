@@ -18,8 +18,10 @@ from module.build_readme import build_readme
 # Increase precision to 64 bit
 jax.config.update("jax_enable_x64", True)
 
-standardize = True #if False, then normalize variables between 0 and 1
-log_transform_scale = False #if True, then log transform scale parameters during estimation
+standardize = True  # if False, then normalize variables between 0 and 1
+log_transform_scale = (
+    False  # if True, then log transform scale parameters during estimation
+)
 
 number_of_starting_values = 4
 number_of_optimizations = 3
@@ -32,7 +34,8 @@ print("Replication Settings")
 print("=" * 80)
 print(f"standardize numerical values: {standardize}")
 print(f"log transform scale parameters: {log_transform_scale}")
-print("=" * 80+"\n")
+print("=" * 80 + "\n")
+
 
 def standardize_variables(variables):
     return (variables - np.mean(variables, axis=0, keepdims=True)) / np.std(
@@ -42,7 +45,8 @@ def standardize_variables(variables):
 
 def normalize_variables(variables):
     return (variables - np.min(variables, axis=0, keepdims=True)) / (
-        np.max(variables, axis=0, keepdims=True) - np.min(variables, axis=0, keepdims=True)
+        np.max(variables, axis=0, keepdims=True)
+        - np.min(variables, axis=0, keepdims=True)
     )
 
 
@@ -90,6 +94,7 @@ def mle_estimation(guess: jax.Array, model: MatchingModel):
     loglik = -model.neg_log_likelihood(estimates_raw, data)
     print(f"\n logL(estimates_raw)={loglik:.6f}\n")
     return estimates_raw, estimates, loglik
+
 
 # Read the XML file
 file_path = "Repl_QE/Data/workingdataset_occind.xml"
@@ -159,8 +164,8 @@ Y_columns = ["y_risk_rateh_occind_ave", "y_public"]
 y_public_index = 1
 x_yrseduc_index = 0
 
-X_vars = jnp.asarray(df[X_columns].to_numpy())[:,None,:]
-Y_vars = jnp.asarray(df[Y_columns].to_numpy())[None,:,:]
+X_vars = jnp.asarray(df[X_columns].to_numpy())[:, None, :]
+Y_vars = jnp.asarray(df[Y_columns].to_numpy())[None, :, :]
 
 X_columns_to_interact = ["x_yrseduc", "x_exp", "x_sex"]
 Y_columns_to_interact = ["y_risk_rateh_occind_ave", "y_public"]
@@ -169,23 +174,18 @@ N = X_vars.shape[0]
 
 X_vars_interacted = jnp.zeros((N, N, 0))
 for y_col in Y_columns_to_interact:
-    y_var = df[y_col].to_numpy()[None,:]
+    y_var = df[y_col].to_numpy()[None, :]
     for x_col in X_columns_to_interact:
-        x_var = df[x_col].to_numpy()[:,None]
+        x_var = df[x_col].to_numpy()[:, None]
 
         X_vars_interacted = jnp.append(
-            X_vars_interacted, 
-            (x_var * y_var)[:,:,None], 
-            axis=-1
+            X_vars_interacted, (x_var * y_var)[:, :, None], axis=-1
         )
 
 x_axis, y_axis = 0, 1
 
 covariates_Y = jnp.concatenate(
-    [
-        jnp.repeat(X_vars, repeats=N, axis=y_axis), 
-        X_vars_interacted
-    ], 
+    [jnp.repeat(X_vars, repeats=N, axis=y_axis), X_vars_interacted],
     axis=-1,
 )
 covariates_X = jnp.concatenate(
@@ -210,7 +210,9 @@ df_covariate_stats = pd.DataFrame(
     }
 ).set_index("")
 
-df_covariate_stats.to_markdown(f"output/covariate_stats_standardize_{standardize}.md", floatfmt=".4f")
+df_covariate_stats.to_markdown(
+    f"output/covariate_stats_standardize_{standardize}.md", floatfmt=".4f"
+)
 
 print("\n" + "=" * 80)
 print("Covariate Statistics Table")
@@ -240,7 +242,7 @@ data = Data(transfers=observed_wage, matches=jnp.ones_like(observed_wage, dtype=
 
 dupuy_galichon_estimates = jnp.asarray(dupuy_galichon_estimates)
 
-guess = dupuy_galichon_estimates[:len(covariate_names)]
+guess = dupuy_galichon_estimates[: len(covariate_names)]
 if model.log_transform_scale:
     guess = jnp.concatenate([guess, jnp.log(dupuy_galichon_estimates[-2:])], axis=0)
 else:
@@ -250,7 +252,7 @@ max_loglik = -jnp.inf
 max_loglik_idx = 0
 estimates_raw_sensitivity = jnp.zeros((len(guess), 0))
 for g in range(number_of_starting_values):
-    if g >0:
+    if g > 0:
         guess = jax.random.uniform(jax.random.PRNGKey(g), guess.shape)
 
     estimates_raw_g, estimates_g, loglik_g = mle_estimation(guess, model)
@@ -258,45 +260,53 @@ for g in range(number_of_starting_values):
     for h in range(number_of_optimizations):
         if h > 0:
             estimates_raw_h, estimates_h, loglik_h = mle_estimation(guess, model)
-            
+
         if loglik_h > loglik_g:
-            estimates_raw_g, estimates_g, loglik_g = estimates_raw_h, estimates_h, loglik_h
+            estimates_raw_g, estimates_g, loglik_g = (
+                estimates_raw_h,
+                estimates_h,
+                loglik_h,
+            )
         else:
             print(f"{loglik_h > loglik_g = }")
             break
-        
+
         guess = estimates_raw_g
 
     estimates_raw_sensitivity = jnp.concatenate(
-        [estimates_raw_sensitivity, estimates_raw_g[:,None]], 
+        [estimates_raw_sensitivity, estimates_raw_g[:, None]],
         axis=1,
     )
     print(f"estimates_raw_sensitivity:\n{estimates_raw_sensitivity.round(4)}")
-    
+
     max_loglik_idx = jnp.where(max_loglik > loglik_g, max_loglik_idx, g)
     max_loglik = jnp.maximum(max_loglik, loglik_g)
     print(f"g={g}: max_loglik_idx={max_loglik_idx}, max_loglik={max_loglik:.6f}.")
 
-estimates_raw = estimates_raw_sensitivity[:,max_loglik_idx]
+estimates_raw = estimates_raw_sensitivity[:, max_loglik_idx]
 estimates = model.transform_parameters(estimates_raw)
 
 estimates_sensitivity = jnp.zeros((len(estimates_raw), 0))
 for g in range(estimates_raw_sensitivity.shape[1]):
     estimates_sensitivity = jnp.concatenate(
-        [   estimates_sensitivity,
-            model.transform_parameters(estimates_raw_sensitivity[:,g])[:,None]
+        [
+            estimates_sensitivity,
+            model.transform_parameters(estimates_raw_sensitivity[:, g])[:, None],
         ],
         axis=1,
     )
     if g == 0:
-        loglik_sensitivity = -model.neg_log_likelihood(estimates_raw_sensitivity[:,g], data)[None]
+        loglik_sensitivity = -model.neg_log_likelihood(
+            estimates_raw_sensitivity[:, g], data
+        )[None]
     else:
         loglik_sensitivity = jnp.concatenate(
-            [   loglik_sensitivity,
-                -model.neg_log_likelihood(estimates_raw_sensitivity[:,g], data)[None]
+            [
+                loglik_sensitivity,
+                -model.neg_log_likelihood(estimates_raw_sensitivity[:, g], data)[None],
             ],
             axis=0,
-    )
+        )
 
 df_estimates = pd.DataFrame(
     {
@@ -336,8 +346,8 @@ df_sensitivity = pd.concat(
 ).set_index("")
 df_loglik = pd.concat(
     [
-        pd.DataFrame({"": ['log-likelihood']}),
-        pd.DataFrame(loglik_sensitivity[None,:], columns=model_names),
+        pd.DataFrame({"": ["log-likelihood"]}),
+        pd.DataFrame(loglik_sensitivity[None, :], columns=model_names),
     ],
     axis=1,
 ).set_index("")

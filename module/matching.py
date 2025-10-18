@@ -103,14 +103,14 @@ class MatchingModel(Pytree, mutable=False):
         # denominator of choice probabilities
         denominator = jnp.sum(nominator, axis=axis, keepdims=True)
         return nominator / denominator
-    
+
     def log_ChoiceProbabilities(self, v: Array, axis: int) -> Array:
-        """ compute the log of the logit choice probabililities using logsumexp from scipy.special
-        
+        """compute the log of the logit choice probabililities using logsumexp from scipy.special
+
         Args:
             v (Array): choice-specific payoffs
             axis (int): axis that describes the choice set
-            
+
         Returns:
             log_p (Array): log of choice probabilities.
         """
@@ -142,7 +142,7 @@ class MatchingModel(Pytree, mutable=False):
             payoff_X (Array): match-specific payoffs for agents of type X
         """
         return jax.lax.add(utility_X, transfer) / sigma_X
-    
+
     def Payoff_Y(self, transfer: Array, utility_Y: Array, sigma_Y: Array) -> Array:
         """Computes match-specific payoffs for agents of type Y
 
@@ -170,12 +170,12 @@ class MatchingModel(Pytree, mutable=False):
         """
         v_X = self.Payoff_X(transfer, utility_X, sigma_X)
         return self.ChoiceProbabilities(v_X, axis=1)
-    
+
     def log_ChoiceProbabilities_X(
         self, transfer: Array, utility_X: Array, sigma_X: Array
     ) -> Array:
         """Compute the log of the logit choice probabililities using logsumexp from scipy.special
-        
+
         Args:
             transfer (Array): match-specific transfers
             utility_X (Array): match-specific utilities for agents of type X
@@ -186,7 +186,7 @@ class MatchingModel(Pytree, mutable=False):
         """
         v_X = self.Payoff_X(transfer, utility_X, sigma_X)
         return self.log_ChoiceProbabilities(v_X, axis=1)
-    
+
     def ChoiceProbabilities_Y(
         self, transfer: Array, utility_Y: Array, sigma_Y: Array
     ) -> Array:
@@ -201,12 +201,12 @@ class MatchingModel(Pytree, mutable=False):
         """
         v_Y = self.Payoff_Y(transfer, utility_Y, sigma_Y)
         return self.ChoiceProbabilities(v_Y, axis=0)
-    
+
     def log_ChoiceProbabilities_Y(
         self, transfer: Array, utility_Y: Array, sigma_Y: Array
     ) -> Array:
         """Compute the log of the logit choice probabililities using logsumexp from scipy.special
-        
+
         Args:
             transfer (Array): match-specific transfers
             utility_Y (Array): match-specific utilities for agents of type Y
@@ -267,16 +267,14 @@ class MatchingModel(Pytree, mutable=False):
             Andersen (2025), Note on solving one-to-one matching models with linear transferable utility, https://arxiv.org/pdf/2409.05518
         """
         # Calculate demand for both sides of the market
-        log_demand_X = self.log_Demand_X(
-            t_initial, utility_X, mp.sigma_X
-        )
-        log_demand_Y = self.log_Demand_Y(
-            t_initial, utility_Y, mp.sigma_Y
-        )
+        log_demand_X = self.log_Demand_X(t_initial, utility_X, mp.sigma_X)
+        log_demand_Y = self.log_Demand_Y(t_initial, utility_Y, mp.sigma_Y)
 
         # Update transfer
         t_updated = t_initial + mp.adjust_step * (log_demand_Y - log_demand_X)
-        return t_updated - t_updated[self.reference, self.reference] # normalize transfers
+        return (
+            t_updated - t_updated[self.reference, self.reference]
+        )  # normalize transfers
 
     def solve(
         self,
@@ -409,21 +407,21 @@ class MatchingModel(Pytree, mutable=False):
             observed_transfer (Array): observed transfers
 
         Returns:
-            mu (Array): 
+            mu (Array):
         mean of the measurement error
-            sigma^2 (Array): 
+            sigma^2 (Array):
         variance of the measurement error
-            R_squared (Array): 
+            R_squared (Array):
         R-squared of measurement error
         """
         error = observed_transfer - model_transfer
 
-        mu = jnp.mean(error)        
+        mu = jnp.mean(error)
 
         if self.include_transfer_constant:
             sigma_sq = jnp.mean(error**2)
         else:
-            sigma_sq =  jnp.mean((error - mu) ** 2)
+            sigma_sq = jnp.mean((error - mu) ** 2)
 
         SST = jnp.var(observed_transfer)
         R_squared = 1 - sigma_sq / SST
@@ -453,7 +451,7 @@ class MatchingModel(Pytree, mutable=False):
             model_transfer = transfer
 
         return self.moments_of_measurement_error(model_transfer, data.transfers)
-        
+
     def neg_log_likelihood(self, params: Array, data: Data) -> Array:
         """Computes the negative log-likelihood function
 
@@ -471,8 +469,12 @@ class MatchingModel(Pytree, mutable=False):
 
         if self.continuous_distributed_attributes:
             model_transfer = jnp.diag(transfer) + mp.transfer_constant
-            log_pX = jnp.diag(self.log_ChoiceProbabilities_X(transfer, utility_X, mp.sigma_X))
-            log_pY = jnp.diag(self.log_ChoiceProbabilities_Y(transfer, utility_Y, mp.sigma_Y))
+            log_pX = jnp.diag(
+                self.log_ChoiceProbabilities_X(transfer, utility_X, mp.sigma_X)
+            )
+            log_pY = jnp.diag(
+                self.log_ChoiceProbabilities_Y(transfer, utility_Y, mp.sigma_Y)
+            )
         else:
             model_transfer = transfer + mp.transfer_constant
             log_pX = self.log_ChoiceProbabilities_X(transfer, utility_X, mp.sigma_X)
@@ -480,11 +482,13 @@ class MatchingModel(Pytree, mutable=False):
 
         number_of_observations = data.transfers.size + 2 * data.matches.sum()
 
-        variance_of_error = self.moments_of_measurement_error(model_transfer, data.transfers)[0]
+        variance_of_error = self.moments_of_measurement_error(
+            model_transfer, data.transfers
+        )[0]
 
-        log_lik_transfers= -jnp.log(variance_of_error) * (data.transfers.size / 2)
+        log_lik_transfers = -jnp.log(variance_of_error) * (data.transfers.size / 2)
         log_lik_matches = jnp.sum(data.matches * (log_pX + log_pY))
-        
+
         neg_log_lik = -(log_lik_transfers + log_lik_matches) / number_of_observations
 
         return neg_log_lik

@@ -36,7 +36,9 @@ def test_mle(include_scale_parameters, include_transfer_constant, log_transform_
         marginal_distribution_X = jnp.ones((X, 1)) / X
         marginal_distribution_Y = jnp.ones((1, Y)) / Y
 
-    assert jnp.isclose(jnp.sum(marginal_distribution_X), jnp.sum(marginal_distribution_Y))
+    assert jnp.isclose(
+        jnp.sum(marginal_distribution_X), jnp.sum(marginal_distribution_Y)
+    )
 
     # Simulate parameters
     beta_X = -jax.random.uniform(jax.random.PRNGKey(311), (N,))
@@ -65,7 +67,9 @@ def test_mle(include_scale_parameters, include_transfer_constant, log_transform_
     parameter_names = parameter_names_X + parameter_names_Y
 
     if include_transfer_constant:
-        parameter_values = jnp.concatenate([parameter_values, transfer_constant], axis=0)
+        parameter_values = jnp.concatenate(
+            [parameter_values, transfer_constant], axis=0
+        )
         parameter_names += ["salary constant"]
 
     if include_scale_parameters:
@@ -92,12 +96,16 @@ def test_mle(include_scale_parameters, include_transfer_constant, log_transform_
     )
 
     # Simulate observed data
-    observed_matches_X = jnp.exp(model.log_Demand_X(
-        transfer=transfer, utility_X=utility_X, sigma_X=mp_true.sigma_X
-    ))
-    observed_matches_Y = jnp.exp(model.log_Demand_Y(
-        transfer=transfer, utility_Y=utility_Y, sigma_Y=mp_true.sigma_Y
-    ))
+    observed_matches_X = jnp.exp(
+        model.log_Demand_X(
+            transfer=transfer, utility_X=utility_X, sigma_X=mp_true.sigma_X
+        )
+    )
+    observed_matches_Y = jnp.exp(
+        model.log_Demand_Y(
+            transfer=transfer, utility_Y=utility_Y, sigma_Y=mp_true.sigma_Y
+        )
+    )
     assert jnp.allclose(observed_matches_X, observed_matches_Y)
     observed_treansfer = transfer + errors
 
