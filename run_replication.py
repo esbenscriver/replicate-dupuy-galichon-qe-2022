@@ -23,7 +23,7 @@ log_transform_scale = (
     False  # if True, then log transform scale parameters during estimation
 )
 
-number_of_starting_values = 4
+number_of_starting_values = 5
 number_of_optimizations = 3
 model_names = [f"({g})" for g in range(number_of_starting_values)]
 
