@@ -53,6 +53,7 @@ class ModelParameters(Pytree, mutable=False):
     sigma_X: Array
     sigma_Y: Array
     transfer_constant: Array
+    adjust_step: Array
 
 
 @dataclass
@@ -261,6 +262,9 @@ class MatchingModel(Pytree, mutable=False):
 
         Returns:
             t_updated (Array): updated transfers
+
+        Reference:
+            Andersen (2025), Note on solving one-to-one matching models with linear transferable utility, https://arxiv.org/pdf/2409.05518
         """
         # Calculate demand for both sides of the market
         log_demand_X = self.log_Demand_X(
@@ -270,10 +274,8 @@ class MatchingModel(Pytree, mutable=False):
             t_initial, utility_Y, mp.sigma_Y
         )
 
-        adjust_step = (mp.sigma_X * mp.sigma_Y) / (mp.sigma_X + mp.sigma_Y)
-
         # Update transfer
-        t_updated = t_initial + adjust_step * (log_demand_Y - log_demand_X)
+        t_updated = t_initial + mp.adjust_step * (log_demand_Y - log_demand_X)
         return t_updated - t_updated[self.reference, self.reference] # normalize transfers
 
     def solve(
@@ -350,12 +352,15 @@ class MatchingModel(Pytree, mutable=False):
             sigma_X = jnp.asarray([1.0])
             sigma_Y = jnp.asarray([1.0])
 
+        adjust_step = (sigma_X * sigma_Y) / (sigma_X + sigma_Y)
+
         return ModelParameters(
             beta_X=beta_X,
             beta_Y=beta_Y,
             transfer_constant=transfer_constant,
             sigma_X=sigma_X,
             sigma_Y=sigma_Y,
+            adjust_step=adjust_step,
         )
 
     def transform_parameters(self, params_raw: Array) -> Array:

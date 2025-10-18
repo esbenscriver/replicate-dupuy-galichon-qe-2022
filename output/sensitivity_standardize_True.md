@@ -13,9 +13,9 @@
 | Years of experience (squared) | -0.050 | -0.050 | -0.050 | -0.087 |
 | Risk x Years of schooling     | -0.079 | -0.061 | -0.067 | -0.000 |
 | Risk x Years of experience    |  0.080 |  0.065 |  0.074 | -0.048 |
-| Risk x Females                | -2.388 | -1.881 | -2.236 | -0.363 |
-| Public x Years of schooling   |  0.849 |  0.720 |  0.830 |  0.273 |
-| Public x Years of experience  |  0.135 |  0.212 |  0.227 |  0.107 |
+| Risk x Females                | -2.388 | -1.881 | -2.237 | -0.363 |
+| Public x Years of schooling   |  0.849 |  0.720 |  0.829 |  0.273 |
+| Public x Years of experience  |  0.135 |  0.212 |  0.226 |  0.107 |
 | Public x Females              |  0.542 |  0.336 |  0.432 |  0.690 |
 | Scale parameter (workers)     |  0.044 |  0.046 |  0.046 |  0.977 |
 | Scale parameter (firms)       |  2.229 |  1.749 |  2.078 |  1.534 |
