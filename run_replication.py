@@ -13,15 +13,16 @@ from module.dupuy_galichon_2022 import (
     covariate_names,
     dupuy_galichon_estimates,
 )
+from module.build_readme import build_readme
 
 # Increase precision to 64 bit
 jax.config.update("jax_enable_x64", True)
 
-standardize = True
-log_transform_scale = False
+standardize = True #if False, then normalize variables between 0 and 1
+log_transform_scale = False #if True, then log transform scale parameters during estimation
 
 number_of_starting_values = 4
-number_of_optimizations = 1
+number_of_optimizations = 3
 model_names = [f"({g})" for g in range(number_of_starting_values)]
 
 specification_name = f"standardize_{standardize}"
@@ -391,3 +392,10 @@ df_loglik.to_markdown(
 )
 
 print(f"{observed_wage.mean() = :.3f}")
+
+# Build README.md from template
+print("\n" + "=" * 80)
+print("Building README.md from template")
+print("=" * 80)
+build_readme()
+print("=" * 80)
