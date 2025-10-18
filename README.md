@@ -48,19 +48,19 @@ From the table, we observe that our estimates for job attributes (rows 1–3) cl
 | Years of experience (squared) |                      -0.051 |          -0.050 |        -0.001 |
 | Risk x Years of schooling     |                      -0.059 |          -0.067 |         0.008 |
 | Risk x Years of experience    |                       0.074 |           0.074 |        -0.000 |
-| Risk x Females                |                      -2.388 |          -2.236 |        -0.152 |
-| Public x Years of schooling   |                       0.838 |           0.830 |         0.008 |
-| Public x Years of experience  |                       0.096 |           0.227 |        -0.131 |
+| Risk x Females                |                      -2.388 |          -2.237 |        -0.151 |
+| Public x Years of schooling   |                       0.838 |           0.829 |         0.009 |
+| Public x Years of experience  |                       0.096 |           0.226 |        -0.130 |
 | Public x Females              |                       0.548 |           0.432 |         0.116 |
 | Scale parameter (workers)     |                       0.046 |           0.046 |         0.000 |
 | Scale parameter (firms)       |                       2.233 |           2.078 |         0.155 |
 
 During the maximization of the log-likelihood function, our optimizer terminates prematurely because it fails to converge to the specified tolerance level of $10^{-6}$. Therefore, we experimented with several different starting values — including the reported estimates of Dupuy and Galichon — and retained the estimates that achieved the highest likelihood. The table below shows the our achieved log-likelihood value and R-squared. It should be emphasized that the reported results for Dupuy and Galichon are the implied values derived from their rounded parameter estimates.  
 
-|                |   Dupuy and Galichon (2022) |     Our results |
-|:---------------|----------------------------:|----------------:|
-| Log-likelihood |                      -5.077 |          -5.076 |
-| R-squared      |                       0.235 |           0.233 |
+|                |   Dupuy and Galichon (2022) |   Our results |
+|:---------------|----------------------------:|--------------:|
+| Log-likelihood |                      -5.077 |        -5.076 |
+| R-squared      |                       0.235 |         0.233 |
 
 Recall that Dupuy and Galichon assume that the measurment errors, $\varepsilon_{i}$, are iid normal distributed, $N(m,s^2)$, with mean zero, $m=0$. However, the inclusion of a salary constant is similar to allow the measurement errors to have a non-zero mean. Consequently, the salary constant can be concentrated out of the likelihood function in the same manner as the mean or variance of the measurement errors,
 
